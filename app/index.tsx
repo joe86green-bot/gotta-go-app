@@ -689,9 +689,7 @@ export default function HomeScreen() {
                 <Text style={styles.modalText}>
                   Originally created as a fun gift for a friend back in 2021, this app unexpectedly became a handy escape plan for many! While it took a little break, we&apos;re excited to bring it back, fully recharged and ready to help you make a smooth exit from any awkward situation.
                 </Text>
-                <Text style={styles.modalText}>
-                  No ads. Completely free. All we ask is for a quick review if you find it helpful&mdash;it really makes a difference and helps others discover the app too!
-                </Text>
+
                 <Text style={styles.modalText}>
                   Thank you for using Gotta Go! Now, let&apos;s make your escape easy and seamless!
                 </Text>
