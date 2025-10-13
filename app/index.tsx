@@ -114,31 +114,48 @@ export default function HomeScreen() {
   const TEXT_SENDER_NUMBER = '+1 (833) 962-4030';
 
   const playRecording = async (recording: typeof RECORDINGS[0]) => {
+    console.log('🎵 [AUDIO] playRecording called');
+    console.log('🎵 [AUDIO] Recording ID:', recording.id);
+    console.log('🎵 [AUDIO] Recording title:', recording.title);
+    console.log('🎵 [AUDIO] Recording URL:', recording.url);
+    
     try {
       if (soundRef.current) {
+        console.log('🎵 [AUDIO] Unloading previous sound');
         await soundRef.current.unloadAsync();
       }
 
       if (playingId === recording.id) {
+        console.log('🎵 [AUDIO] Stopping playback (same recording)');
         setPlayingId(null);
         return;
       }
 
+      if (!recording.url || recording.url.trim() === '') {
+        console.error('❌ [AUDIO] Empty or invalid URL');
+        Alert.alert('Error', 'Invalid recording URL');
+        return;
+      }
+
+      console.log('🎵 [AUDIO] Creating sound from URL:', recording.url);
       const { sound } = await Audio.Sound.createAsync(
         { uri: recording.url },
         { shouldPlay: true }
       );
+      console.log('✅ [AUDIO] Sound created successfully');
       
       soundRef.current = sound;
       setPlayingId(recording.id);
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
+          console.log('🎵 [AUDIO] Playback finished');
           setPlayingId(null);
         }
       });
     } catch (error) {
-      console.error('Error playing sound:', error);
+      console.error('❌ [AUDIO] Error playing sound:', error);
+      console.error('❌ [AUDIO] Error details:', JSON.stringify(error, null, 2));
       Alert.alert('Error', 'Failed to play recording');
     }
   };

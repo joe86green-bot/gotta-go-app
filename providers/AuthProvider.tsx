@@ -82,21 +82,35 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   };
 
   const register = useCallback(async (email: string, password: string, phone: string) => {
+    console.log('🔵 [REGISTER] Starting registration process...');
+    console.log('🔵 [REGISTER] Email:', email);
+    console.log('🔵 [REGISTER] Phone:', phone);
+    console.log('🔵 [REGISTER] Password length:', password.length);
+    
     try {
+      console.log('🔵 [REGISTER] Calling createUserWithEmailAndPassword...');
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const isAdmin = email === 'kevinspot@gmail.com';
+      console.log('✅ [REGISTER] User created in Firebase Auth:', userCredential.user.uid);
       
+      const isAdmin = email === 'kevinspot@gmail.com';
+      console.log('🔵 [REGISTER] Is admin:', isAdmin);
+      
+      console.log('🔵 [REGISTER] Creating Firestore document...');
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email,
         phone,
         createdAt: new Date(),
         isAdmin,
       });
+      console.log('✅ [REGISTER] Firestore document created successfully');
 
-      console.log('User registered successfully');
+      console.log('✅ [REGISTER] User registered successfully');
       return userCredential.user;
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('❌ [REGISTER] Registration error:', error);
+      console.error('❌ [REGISTER] Error code:', error.code);
+      console.error('❌ [REGISTER] Error message:', error.message);
+      console.error('❌ [REGISTER] Full error:', JSON.stringify(error, null, 2));
       throw new Error(error.message || 'Failed to register');
     }
   }, []);

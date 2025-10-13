@@ -34,40 +34,61 @@ export default function AuthScreen() {
   const { register, signIn, continueAsGuest } = useAuth();
 
   const handleSubmit = async () => {
+    console.log('🟢 [AUTH] handleSubmit called');
+    console.log('🟢 [AUTH] Mode:', mode);
+    console.log('🟢 [AUTH] Email:', email);
+    console.log('🟢 [AUTH] Phone:', phone);
+    console.log('🟢 [AUTH] Password length:', password.length);
+    
     Keyboard.dismiss();
     
     if (!email || !password) {
+      console.log('❌ [AUTH] Missing email or password');
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
     if (mode === 'register') {
+      console.log('🟢 [AUTH] Register mode validation...');
       if (!phone) {
+        console.log('❌ [AUTH] Missing phone number');
         Alert.alert('Error', 'Please enter your phone number');
         return;
       }
       if (password !== confirmPassword) {
+        console.log('❌ [AUTH] Passwords do not match');
         Alert.alert('Error', 'Passwords do not match');
         return;
       }
       if (password.length < 6) {
+        console.log('❌ [AUTH] Password too short');
         Alert.alert('Error', 'Password must be at least 6 characters');
         return;
       }
+      console.log('✅ [AUTH] All validations passed');
     }
 
+    console.log('🟢 [AUTH] Setting loading to true');
     setLoading(true);
     try {
       if (mode === 'register') {
+        console.log('🟢 [AUTH] Calling register function...');
         await register(email, password, phone);
+        console.log('✅ [AUTH] Register function completed');
         Alert.alert('Success', 'Account created successfully!');
       } else {
+        console.log('🟢 [AUTH] Calling signIn function...');
         await signIn(email, password);
+        console.log('✅ [AUTH] SignIn function completed');
       }
+      console.log('🟢 [AUTH] Navigating to home...');
       router.replace('/');
     } catch (error: any) {
+      console.error('❌ [AUTH] Error in handleSubmit:', error);
+      console.error('❌ [AUTH] Error message:', error.message);
       Alert.alert('Error', error.message || 'Authentication failed');
     } finally {
+      console.log('🟢 [AUTH] Setting loading to false');
       setLoading(false);
     }
   };
