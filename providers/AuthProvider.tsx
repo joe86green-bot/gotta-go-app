@@ -77,19 +77,28 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
 
   const signUp = useCallback(async (email: string, password: string, phone: string) => {
     try {
+      console.log('Starting sign up process...');
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('User created in Firebase Auth:', userCredential.user.uid);
+      
       await AsyncStorage.setItem(`phone_${userCredential.user.uid}`, phone);
       setPhoneNumber(phone);
+      console.log('Phone number saved to AsyncStorage');
       
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        email: userCredential.user.email,
-        phoneNumber: phone,
-        createdAt: serverTimestamp(),
-        uid: userCredential.user.uid,
-      });
+      try {
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          email: userCredential.user.email,
+          phoneNumber: phone,
+          createdAt: serverTimestamp(),
+          uid: userCredential.user.uid,
+        });
+        console.log('User data saved to Firestore');
+      } catch (firestoreError) {
+        console.warn('Failed to save to Firestore, but user account created:', firestoreError);
+      }
       
       await AsyncStorage.removeItem('guest_mode');
-      console.log('User signed up:', userCredential.user.email);
+      console.log('User signed up successfully:', userCredential.user.email);
     } catch (error: unknown) {
       console.error('Sign up error:', error);
       if (error && typeof error === 'object' && 'code' in error) {
