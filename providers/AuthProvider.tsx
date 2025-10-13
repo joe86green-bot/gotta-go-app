@@ -1,133 +1,127 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import { 
   User,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut,
+  signOut as firebaseSignOut,
   onAuthStateChanged,
-  updateEmail,
-  updatePassword,
-  deleteUser,
+  updateEmail as firebaseUpdateEmail,
+  updatePassword as firebaseUpdatePassword,
+  deleteUser as firebaseDeleteUser,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  sendPasswordResetEmail,
-  OAuthProvider,
-  signInWithCredential
 } from 'firebase/auth';
+import { doc, setDoc, getDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import { Platform } from 'react-native';
 
-interface AuthContextType {
-  user: User | null;
-  isGuest: boolean;
-  loading: boolean;
-  signUp: (email: string, password: string, phoneNumber: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signInWithApple: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  logout: () => Promise<void>;
-  continueAsGuest: () => Promise<void>;
-  updateUserEmail: (newEmail: string, currentPassword: string) => Promise<void>;
-  updateUserPassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  deleteAccount: (password: string) => Promise<void>;
-  phoneNumber: string | null;
-  isAppleSignInAvailable: boolean;
+interface UserProfile {
+  email: string;
+  phone: string;
+  createdAt: Date;
+  isAdmin: boolean;
 }
 
-export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isGuest, setIsGuest] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
-  const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState<boolean>(false);
+interface MaintenanceMode {
+  enabled: boolean;
+  message: string;
+}
 
-  useEffect(() => {
-    const checkAppleSignIn = async () => {
-      if (Platform.OS === 'ios') {
-        try {
-          const available = await AppleAuthentication.isAvailableAsync();
-          setIsAppleSignInAvailable(available);
-        } catch (error) {
-          console.log('Apple sign in not available:', error);
-          setIsAppleSignInAvailable(false);
-        }
-      }
-    };
-    checkAppleSignIn();
-  }, []);
+export const [AuthProvider, useAuth] = createContextHook(() => {
+  const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [maintenanceMode, setMaintenanceMode] = useState<MaintenanceMode>({ enabled: false, message: '' });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('Auth state changed:', firebaseUser?.email || 'No user');
+      console.log('Auth state changed:', firebaseUser?.email);
       setUser(firebaseUser);
       
       if (firebaseUser) {
+        const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (profileDoc.exists()) {
+          const data = profileDoc.data();
+          setUserProfile({
+            email: data.email,
+            phone: data.phone,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            isAdmin: data.isAdmin || false,
+          });
+        }
         setIsGuest(false);
-        try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setPhoneNumber(userData.phoneNumber || null);
-          }
-        } catch (error) {
-          console.log('Error fetching user data:', error);
-        }
       } else {
-        try {
-          const guestMode = await AsyncStorage.getItem('guest_mode');
-          setIsGuest(guestMode === 'true');
-        } catch (error) {
-          console.log('Error checking guest mode:', error);
-        }
+        setUserProfile(null);
+        const guestMode = await AsyncStorage.getItem('guest_mode');
+        setIsGuest(guestMode === 'true');
       }
       
       setLoading(false);
     });
 
+    loadMaintenanceMode();
+
     return unsubscribe;
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, phone: string) => {
-    console.log('Starting sign up...');
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log('User created:', userCredential.user.uid);
-    
-    await setDoc(doc(db, 'users', userCredential.user.uid), {
-      email: userCredential.user.email,
-      phoneNumber: phone,
-      createdAt: new Date().toISOString(),
-      uid: userCredential.user.uid,
-    });
-    console.log('User data saved');
-    
-    setPhoneNumber(phone);
-    await AsyncStorage.removeItem('guest_mode');
+  const loadMaintenanceMode = async () => {
+    try {
+      const maintenanceDoc = await getDoc(doc(db, 'settings', 'maintenance'));
+      if (maintenanceDoc.exists()) {
+        const data = maintenanceDoc.data();
+        setMaintenanceMode({
+          enabled: data.enabled || false,
+          message: data.message || 'Service temporarily unavailable',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading maintenance mode:', error);
+    }
+  };
+
+  const register = useCallback(async (email: string, password: string, phone: string) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const isAdmin = email === 'kevinspot@gmail.com';
+      
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email,
+        phone,
+        createdAt: new Date(),
+        isAdmin,
+      });
+
+      console.log('User registered successfully');
+      return userCredential.user;
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      throw new Error(error.message || 'Failed to register');
+    }
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    console.log('Starting sign in...');
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('User signed in:', userCredential.user.uid);
-    
-    const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      setPhoneNumber(userData.phoneNumber || null);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await AsyncStorage.removeItem('guest_mode');
+      console.log('User signed in successfully');
+      return userCredential.user;
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      throw new Error(error.message || 'Failed to sign in');
     }
-    
-    await AsyncStorage.removeItem('guest_mode');
   }, []);
 
-  const logout = useCallback(async () => {
-    await signOut(auth);
-    setPhoneNumber(null);
-    setIsGuest(false);
-    await AsyncStorage.removeItem('guest_mode');
-    console.log('User logged out');
+  const signOut = useCallback(async () => {
+    try {
+      await firebaseSignOut(auth);
+      await AsyncStorage.removeItem('guest_mode');
+      console.log('User signed out successfully');
+    } catch (error: any) {
+      console.error('Sign out error:', error);
+      throw new Error(error.message || 'Failed to sign out');
+    }
   }, []);
 
   const continueAsGuest = useCallback(async () => {
@@ -136,85 +130,97 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
     console.log('Continuing as guest');
   }, []);
 
-  const signInWithApple = useCallback(async () => {
-    const credential = await AppleAuthentication.signInAsync({
-      requestedScopes: [
-        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-        AppleAuthentication.AppleAuthenticationScope.EMAIL,
-      ],
-    });
-
-    const { identityToken } = credential;
-    if (!identityToken) {
-      throw new Error('No identity token returned from Apple');
-    }
-
-    const provider = new OAuthProvider('apple.com');
-    const firebaseCredential = provider.credential({
-      idToken: identityToken,
-    });
-
-    const userCredential = await signInWithCredential(auth, firebaseCredential);
-    
-    const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-    if (!userDoc.exists()) {
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        email: userCredential.user.email,
-        createdAt: new Date().toISOString(),
-        uid: userCredential.user.uid,
-      });
-    }
-    
-    await AsyncStorage.removeItem('guest_mode');
-    console.log('User signed in with Apple');
-  }, []);
-
-  const resetPassword = useCallback(async (email: string) => {
-    await sendPasswordResetEmail(auth, email);
-    console.log('Password reset email sent');
-  }, []);
-
   const updateUserEmail = useCallback(async (newEmail: string, currentPassword: string) => {
-    if (!user || !user.email) throw new Error('No user logged in');
+    if (!user) throw new Error('No user logged in');
     
-    const credential = EmailAuthProvider.credential(user.email, currentPassword);
-    await reauthenticateWithCredential(user, credential);
-    await updateEmail(user, newEmail);
-    console.log('Email updated');
+    try {
+      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await firebaseUpdateEmail(user, newEmail);
+      await setDoc(doc(db, 'users', user.uid), { email: newEmail }, { merge: true });
+      console.log('Email updated successfully');
+    } catch (error: any) {
+      console.error('Update email error:', error);
+      throw new Error(error.message || 'Failed to update email');
+    }
   }, [user]);
 
   const updateUserPassword = useCallback(async (currentPassword: string, newPassword: string) => {
-    if (!user || !user.email) throw new Error('No user logged in');
+    if (!user) throw new Error('No user logged in');
     
-    const credential = EmailAuthProvider.credential(user.email, currentPassword);
-    await reauthenticateWithCredential(user, credential);
-    await updatePassword(user, newPassword);
-    console.log('Password updated');
+    try {
+      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await firebaseUpdatePassword(user, newPassword);
+      console.log('Password updated successfully');
+    } catch (error: any) {
+      console.error('Update password error:', error);
+      throw new Error(error.message || 'Failed to update password');
+    }
   }, [user]);
 
   const deleteAccount = useCallback(async (password: string) => {
-    if (!user || !user.email) throw new Error('No user logged in');
+    if (!user) throw new Error('No user logged in');
     
-    const credential = EmailAuthProvider.credential(user.email, password);
-    await reauthenticateWithCredential(user, credential);
-    await deleteUser(user);
-    console.log('Account deleted');
+    try {
+      const credential = EmailAuthProvider.credential(user.email!, password);
+      await reauthenticateWithCredential(user, credential);
+      await deleteDoc(doc(db, 'users', user.uid));
+      await firebaseDeleteUser(user);
+      console.log('Account deleted successfully');
+    } catch (error: any) {
+      console.error('Delete account error:', error);
+      throw new Error(error.message || 'Failed to delete account');
+    }
   }, [user]);
 
-  return {
+  const getAllUsers = useCallback(async () => {
+    if (!userProfile?.isAdmin) throw new Error('Unauthorized');
+    
+    try {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      return usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      }));
+    } catch (error: any) {
+      console.error('Get users error:', error);
+      throw new Error(error.message || 'Failed to get users');
+    }
+  }, [userProfile]);
+
+  const setMaintenanceModeAdmin = useCallback(async (enabled: boolean, message: string) => {
+    if (!userProfile?.isAdmin) throw new Error('Unauthorized');
+    
+    try {
+      await setDoc(doc(db, 'settings', 'maintenance'), {
+        enabled,
+        message,
+        updatedAt: new Date(),
+      });
+      setMaintenanceMode({ enabled, message });
+      console.log('Maintenance mode updated');
+    } catch (error: any) {
+      console.error('Set maintenance mode error:', error);
+      throw new Error(error.message || 'Failed to update maintenance mode');
+    }
+  }, [userProfile]);
+
+  return useMemo(() => ({
     user,
+    userProfile,
     isGuest,
     loading,
-    signUp,
+    maintenanceMode,
+    register,
     signIn,
-    signInWithApple,
-    resetPassword,
-    logout,
+    signOut,
     continueAsGuest,
     updateUserEmail,
     updateUserPassword,
     deleteAccount,
-    phoneNumber,
-    isAppleSignInAvailable,
-  };
+    getAllUsers,
+    setMaintenanceModeAdmin,
+  }), [user, userProfile, isGuest, loading, maintenanceMode, register, signIn, signOut, continueAsGuest, updateUserEmail, updateUserPassword, deleteAccount, getAllUsers, setMaintenanceModeAdmin]);
 });
