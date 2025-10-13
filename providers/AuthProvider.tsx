@@ -15,7 +15,8 @@ import {
   OAuthProvider,
   signInWithCredential
 } from 'firebase/auth';
-import { auth } from '@/config/firebase';
+import { auth, db } from '@/config/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Platform } from 'react-native';
@@ -79,6 +80,14 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await AsyncStorage.setItem(`phone_${userCredential.user.uid}`, phone);
       setPhoneNumber(phone);
+      
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email: userCredential.user.email,
+        phoneNumber: phone,
+        createdAt: serverTimestamp(),
+        uid: userCredential.user.uid,
+      });
+      
       await AsyncStorage.removeItem('guest_mode');
       console.log('User signed up:', userCredential.user.email);
     } catch (error) {

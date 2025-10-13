@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { User, LogOut, Trash2, Mail, Lock, Phone, X, Shield } from 'lucide-react-native';
+import { User, LogOut, Trash2, Mail, Lock, Phone, X, Shield, Users } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { useAdmin, checkIsAdmin } from '@/providers/AdminProvider';
@@ -200,6 +200,21 @@ export default function ProfileScreen() {
         {isAdmin && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Admin Controls</Text>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => router.push('/members')}
+            >
+              <View style={[styles.settingIcon, styles.adminIcon]}>
+                <Users size={20} color={COLORS.primary} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={styles.settingTitle}>View Members</Text>
+                <Text style={styles.settingDescription}>
+                  See all registered users
+                </Text>
+              </View>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.settingItem}

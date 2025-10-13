@@ -33,6 +33,13 @@ function RootLayoutNav() {
           headerShown: true 
         }} 
       />
+      <Stack.Screen 
+        name="members" 
+        options={{ 
+          title: "Members",
+          headerShown: true 
+        }} 
+      />
     </Stack>
   );
 }
