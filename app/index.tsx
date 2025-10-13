@@ -15,7 +15,7 @@ import {
   AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Phone, MessageSquare, Play, Pause, Check, Calendar, Clock, Save, Info, List, X, Eye, EyeOff, Shuffle, Zap } from 'lucide-react-native';
+import { Phone, MessageSquare, Play, Pause, Check, Calendar, Clock, Save, Info, List, X, Eye, EyeOff, Shuffle, Zap, User as UserIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,10 +25,12 @@ import { COLORS } from '@/constants/colors';
 import { RECORDINGS } from '@/constants/recordings';
 import { scheduleCall, scheduleText } from '@/services/clicksend';
 import { useScheduledItems } from '@/providers/ScheduledItemsProvider';
+import { useAuth } from '@/providers/AuthProvider';
 
 type TabType = 'call' | 'text';
 
 export default function HomeScreen() {
+  const { user, isGuest, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('call');
   const [selectedRecording, setSelectedRecording] = useState<number | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
@@ -171,6 +173,19 @@ export default function HomeScreen() {
   };
 
   const handleSchedule = async () => {
+    if (isGuest) {
+      Alert.alert(
+        'Login Required',
+        'You need to create an account or sign in to use this feature.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => router.push('/login') },
+          { text: 'Sign Up', onPress: () => router.push('/register') },
+        ]
+      );
+      return;
+    }
+
     if (!phoneNumber || phoneNumber.length < 10) {
       Alert.alert('Error', 'Please enter a valid phone number');
       return;
@@ -274,6 +289,22 @@ export default function HomeScreen() {
     });
   };
 
+  useEffect(() => {
+    if (!authLoading && !user && !isGuest) {
+      router.replace('/welcome');
+    }
+  }, [authLoading, user, isGuest]);
+
+  if (authLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -291,13 +322,26 @@ export default function HomeScreen() {
             <View style={styles.headerCenter}>
               <Text style={styles.title}>Gotta Go</Text>
               <Text style={styles.subtitle}>Your emergency escape plan</Text>
+              {isGuest && (
+                <Text style={styles.guestBadge}>Guest Mode</Text>
+              )}
             </View>
-            <TouchableOpacity 
-              style={styles.headerButton}
-              onPress={() => router.push('/scheduled-items')}
-            >
-              <List size={24} color={COLORS.primary} />
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              {!isGuest && user && (
+                <TouchableOpacity 
+                  style={styles.headerButton}
+                  onPress={() => router.push('/profile')}
+                >
+                  <UserIcon size={24} color={COLORS.primary} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => router.push('/scheduled-items')}
+              >
+                <List size={24} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -1174,5 +1218,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600' as const,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guestBadge: {
+    fontSize: 12,
+    color: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 6,
+    fontWeight: '600' as const,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 8,
   },
 });
