@@ -10,10 +10,15 @@ import {
   updatePassword,
   deleteUser,
   EmailAuthProvider,
-  reauthenticateWithCredential
+  reauthenticateWithCredential,
+  sendPasswordResetEmail,
+  OAuthProvider,
+  signInWithCredential
 } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { Platform } from 'react-native';
 
 interface AuthContextType {
   user: User | null;
@@ -21,12 +26,15 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, phoneNumber: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithApple: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   continueAsGuest: () => Promise<void>;
   updateUserEmail: (newEmail: string, currentPassword: string) => Promise<void>;
   updateUserPassword: (currentPassword: string, newPassword: string) => Promise<void>;
   deleteAccount: (password: string) => Promise<void>;
   phoneNumber: string | null;
+  isAppleSignInAvailable: boolean;
 }
 
 export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => {
@@ -34,6 +42,17 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
+  const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkAppleSignIn = async () => {
+      if (Platform.OS === 'ios') {
+        const available = await AppleAuthentication.isAvailableAsync();
+        setIsAppleSignInAvailable(available);
+      }
+    };
+    checkAppleSignIn();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -105,6 +124,51 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
     }
   }, []);
 
+  const signInWithApple = useCallback(async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      const { identityToken } = credential;
+      if (!identityToken) {
+        throw new Error('No identity token returned from Apple');
+      }
+
+      const provider = new OAuthProvider('apple.com');
+      const firebaseCredential = provider.credential({
+        idToken: identityToken,
+      });
+
+      const userCredential = await signInWithCredential(auth, firebaseCredential);
+      await AsyncStorage.removeItem('guest_mode');
+      console.log('User signed in with Apple:', userCredential.user.email);
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error) {
+        const appleError = error as { code: string };
+        if (appleError.code === 'ERR_REQUEST_CANCELED') {
+          console.log('Apple sign in canceled');
+          return;
+        }
+      }
+      console.error('Apple sign in error:', error);
+      throw error;
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      console.log('Password reset email sent to:', email);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    }
+  }, []);
+
   const updateUserEmail = useCallback(async (newEmail: string, currentPassword: string) => {
     if (!user || !user.email) throw new Error('No user logged in');
     
@@ -158,11 +222,14 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
     loading,
     signUp,
     signIn,
+    signInWithApple,
+    resetPassword,
     logout,
     continueAsGuest,
     updateUserEmail,
     updateUserPassword,
     deleteAccount,
     phoneNumber,
-  }), [user, isGuest, loading, signUp, signIn, logout, continueAsGuest, updateUserEmail, updateUserPassword, deleteAccount, phoneNumber]);
+    isAppleSignInAvailable,
+  }), [user, isGuest, loading, signUp, signIn, signInWithApple, resetPassword, logout, continueAsGuest, updateUserEmail, updateUserPassword, deleteAccount, phoneNumber, isAppleSignInAvailable]);
 });

@@ -13,16 +13,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { LogIn, Eye, EyeOff } from 'lucide-react-native';
+import { LogIn, Eye, EyeOff, Apple } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function LoginScreen() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithApple, isAppleSignInAvailable } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -40,6 +41,20 @@ export default function LoginScreen() {
       Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setAppleLoading(true);
+    try {
+      await signInWithApple();
+      router.replace('/');
+    } catch (error: unknown) {
+      console.error('Apple sign in error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Apple';
+      Alert.alert('Sign In Failed', errorMessage);
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -101,6 +116,13 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
+              style={styles.forgotPassword}
+              onPress={() => router.push('/forgot-password')}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.loginButton, loading && styles.disabledButton]}
               onPress={handleLogin}
               disabled={loading}
@@ -111,6 +133,31 @@ export default function LoginScreen() {
                 <Text style={styles.loginButtonText}>Sign In</Text>
               )}
             </TouchableOpacity>
+
+            {isAppleSignInAvailable && (
+              <>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>OR</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.appleButton, appleLoading && styles.disabledButton]}
+                  onPress={handleAppleSignIn}
+                  disabled={appleLoading}
+                >
+                  {appleLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Apple size={20} color="#fff" />
+                      <Text style={styles.appleButtonText}>Sign in with Apple</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don&apos;t have an account? </Text>
@@ -194,6 +241,15 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 16,
   },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 10,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '600' as const,
+  },
   loginButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
@@ -210,6 +266,41 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   loginButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#fff',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '600' as const,
+  },
+  appleButton: {
+    backgroundColor: '#000',
+    borderRadius: 12,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  appleButtonText: {
     fontSize: 18,
     fontWeight: 'bold' as const,
     color: '#fff',

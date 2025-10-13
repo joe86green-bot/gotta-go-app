@@ -23,7 +23,8 @@
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
         "NSContactsUsageDescription": "A message that tells the user why the app is requesting access to the user's contacts."
       },
-      "accessesContactNotes": true
+      "accessesContactNotes": true,
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -58,7 +59,8 @@
         {
           "contactsPermission": "Allow $(PRODUCT_NAME) to access your contacts."
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true
