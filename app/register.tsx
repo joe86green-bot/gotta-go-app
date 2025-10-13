@@ -46,9 +46,8 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await signUp(email, password, phoneNumber);
-      Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.replace('/') }
-      ]);
+      setLoading(false);
+      router.replace('/');
     } catch (error: unknown) {
       console.error('Registration error:', error);
       setLoading(false);
