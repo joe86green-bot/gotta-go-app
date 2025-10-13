@@ -67,9 +67,10 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <LogIn size={48} color={COLORS.primary} />
+            <LogIn size={36} color={COLORS.primary} />
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to continue</Text>
           </View>
@@ -181,40 +182,42 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingVertical: 20,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold' as const,
     color: COLORS.text,
-    marginTop: 16,
+    marginTop: 12,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textSecondary,
-    marginTop: 8,
+    marginTop: 4,
   },
   form: {
     width: '100%',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   input: {
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     fontSize: 15,
     color: COLORS.text,
     shadowColor: '#000',
@@ -236,16 +239,16 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     flex: 1,
-    padding: 16,
+    padding: 14,
     fontSize: 15,
     color: COLORS.text,
   },
   eyeButton: {
-    padding: 16,
+    padding: 14,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   forgotPasswordText: {
     fontSize: 14,
@@ -255,9 +258,9 @@ const styles = StyleSheet.create({
   loginButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
-    padding: 18,
+    padding: 16,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -268,14 +271,14 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   loginButtonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold' as const,
     color: '#fff',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: 16,
   },
   dividerLine: {
     flex: 1,
@@ -291,7 +294,7 @@ const styles = StyleSheet.create({
   appleButton: {
     backgroundColor: '#000',
     borderRadius: 12,
-    padding: 18,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -303,7 +306,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   appleButtonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold' as const,
     color: '#fff',
   },
@@ -311,7 +314,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 16,
   },
   footerText: {
     fontSize: 14,
