@@ -82,12 +82,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         setMaintenanceMode({ enabled: false, message: '' });
       }
     } catch (error: any) {
-      console.error('❌ [MAINTENANCE] Error loading maintenance mode:', error);
-      console.error('❌ [MAINTENANCE] Error code:', error?.code);
-      console.error('❌ [MAINTENANCE] Error message:', error?.message);
-      
       if (error?.code === 'unavailable') {
         console.log('ℹ️ [MAINTENANCE] Client is offline, using default maintenance mode');
+        setMaintenanceMode({ enabled: false, message: '' });
+      } else {
+        console.error('❌ [MAINTENANCE] Error loading maintenance mode:', error);
+        console.error('❌ [MAINTENANCE] Error code:', error?.code);
+        console.error('❌ [MAINTENANCE] Error message:', error?.message);
         setMaintenanceMode({ enabled: false, message: '' });
       }
     }
