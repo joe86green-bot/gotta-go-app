@@ -47,11 +47,12 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await signUp(email, password, phoneNumber);
-      Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.replace('/') }
-      ]);
+      setLoading(false);
+      router.replace('/');
     } catch (error: any) {
       console.error('Registration error:', error);
+      setLoading(false);
+      
       let errorMessage = 'Failed to register. Please try again.';
       
       if (error.code === 'auth/email-already-in-use') {
@@ -65,8 +66,6 @@ export default function RegisterScreen() {
       }
       
       Alert.alert('Registration Failed', errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 
