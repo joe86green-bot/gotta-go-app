@@ -26,11 +26,13 @@ import { RECORDINGS } from '@/constants/recordings';
 import { scheduleCall, scheduleText } from '@/services/clicksend';
 import { useScheduledItems } from '@/providers/ScheduledItemsProvider';
 import { useAuth } from '@/providers/AuthProvider';
+import { useAdmin } from '@/providers/AdminProvider';
 
 type TabType = 'call' | 'text';
 
 export default function HomeScreen() {
   const { user, isGuest, loading: authLoading } = useAuth();
+  const { settings: adminSettings } = useAdmin();
   const [activeTab, setActiveTab] = useState<TabType>('call');
   const [selectedRecording, setSelectedRecording] = useState<number | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
@@ -60,9 +62,7 @@ export default function HomeScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [enableRetries, setEnableRetries] = useState(false);
-  const [maxRetries, setMaxRetries] = useState(3);
-  const [enableRandomTiming, setEnableRandomTiming] = useState(false);
+
   const [stealthMode, setStealthMode] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
   const { addScheduledItem } = useScheduledItems();
@@ -173,6 +173,11 @@ export default function HomeScreen() {
   };
 
   const handleSchedule = async () => {
+    if (adminSettings.schedulingDisabled) {
+      Alert.alert('Scheduling Disabled', adminSettings.disabledMessage);
+      return;
+    }
+
     if (isGuest) {
       Alert.alert(
         'Login Required',
@@ -206,13 +211,6 @@ export default function HomeScreen() {
       return;
     }
 
-    // Apply random timing if enabled (for calls with retries)
-    let finalScheduledDate = scheduledDate;
-    if (activeTab === 'call' && enableRetries && enableRandomTiming) {
-      const randomMinutes = Math.floor(Math.random() * 3) + 1; // 1-3 minutes
-      finalScheduledDate = new Date(scheduledDate.getTime() + randomMinutes * 60000);
-    }
-
     setIsScheduling(true);
 
     try {
@@ -223,25 +221,25 @@ export default function HomeScreen() {
           addScheduledItem({
             type: 'call',
             phoneNumber,
-            scheduledTime: finalScheduledDate,
+            scheduledTime: scheduledDate,
             recordingId: recording.id,
             recordingTitle: recording.title,
-            maxRetries: enableRetries ? maxRetries : 1,
+            maxRetries: 1,
             retryCount: 0,
           });
           
-          await scheduleCall(phoneNumber, finalScheduledDate, recording.url);
+          await scheduleCall(phoneNumber, scheduledDate, recording.url);
         }
       } else {
         // Add to scheduled items first to check limit
         addScheduledItem({
           type: 'text',
           phoneNumber,
-          scheduledTime: finalScheduledDate,
+          scheduledTime: scheduledDate,
           message: textMessage,
         });
         
-        await scheduleText(phoneNumber, finalScheduledDate, textMessage);
+        await scheduleText(phoneNumber, scheduledDate, textMessage);
       }
 
       // Handle stealth mode
@@ -259,8 +257,6 @@ export default function HomeScreen() {
       setSelectedRecording(null);
       setScheduledDate(new Date(Date.now() + 5 * 60000));
       setStealthMode(false);
-      setEnableRetries(false);
-      setEnableRandomTiming(false);
     } catch (error) {
       console.error('Error scheduling:', error);
       if (error instanceof Error && error.message.includes('Maximum of 3 scheduled items')) {
@@ -444,6 +440,8 @@ export default function HomeScreen() {
                   maxLength={160}
                   multiline
                   numberOfLines={4}
+                  returnKeyType="done"
+                  blurOnSubmit
                 />
                 <Text style={styles.charCount}>{textMessage.length}/160</Text>
               </View>
@@ -459,6 +457,7 @@ export default function HomeScreen() {
               value={phoneNumber}
               onChangeText={setPhoneNumber}
               keyboardType="phone-pad"
+              returnKeyType="done"
             />
           </View>
 
@@ -538,76 +537,7 @@ export default function HomeScreen() {
               />
             </View>
 
-            {activeTab === 'call' && (
-              <>
-                {/* Retry Options */}
-                <View style={styles.optionRow}>
-                  <View style={styles.optionInfo}>
-                    <View style={styles.optionHeader}>
-                      <Phone size={20} color={enableRetries ? COLORS.primary : COLORS.textSecondary} />
-                      <Text style={styles.optionTitle}>Retry Calls</Text>
-                    </View>
-                    <Text style={styles.optionDescription}>
-                      Call up to 3 times until answered
-                    </Text>
-                  </View>
-                  <Switch
-                    value={enableRetries}
-                    onValueChange={setEnableRetries}
-                    trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                    thumbColor={enableRetries ? COLORS.primary : '#f4f3f4'}
-                  />
-                </View>
-                
-                {enableRetries && (
-                  <>
-                    <View style={styles.retryCountContainer}>
-                      <Text style={styles.retryCountLabel}>Max retries:</Text>
-                      <View style={styles.retryCountButtons}>
-                        {[1, 2, 3].map((count) => (
-                          <TouchableOpacity
-                            key={count}
-                            style={[
-                              styles.retryCountButton,
-                              maxRetries === count && styles.retryCountButtonActive,
-                            ]}
-                            onPress={() => setMaxRetries(count)}
-                          >
-                            <Text
-                              style={[
-                                styles.retryCountButtonText,
-                                maxRetries === count && styles.retryCountButtonTextActive,
-                              ]}
-                            >
-                              {count}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
 
-                    {/* Random Timing */}
-                    <View style={styles.optionRow}>
-                      <View style={styles.optionInfo}>
-                        <View style={styles.optionHeader}>
-                          <Shuffle size={20} color={enableRandomTiming ? COLORS.primary : COLORS.textSecondary} />
-                          <Text style={styles.optionTitle}>Random Timing</Text>
-                        </View>
-                        <Text style={styles.optionDescription}>
-                          Add 1-3 minutes randomness to seem natural
-                        </Text>
-                      </View>
-                      <Switch
-                        value={enableRandomTiming}
-                        onValueChange={setEnableRandomTiming}
-                        trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                        thumbColor={enableRandomTiming ? COLORS.primary : '#f4f3f4'}
-                      />
-                    </View>
-                  </>
-                )}
-              </>
-            )}
           </View>
 
           <TouchableOpacity

@@ -84,6 +84,7 @@ export default function RegisterScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                returnKeyType="next"
               />
             </View>
 
@@ -96,6 +97,7 @@ export default function RegisterScreen() {
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
                 keyboardType="phone-pad"
+                returnKeyType="next"
               />
             </View>
 
@@ -111,6 +113,7 @@ export default function RegisterScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  returnKeyType="next"
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -137,6 +140,8 @@ export default function RegisterScreen() {
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handleRegister}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -182,10 +187,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 40,
   },
   header: {
     alignItems: 'center',

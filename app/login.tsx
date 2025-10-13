@@ -86,6 +86,7 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                returnKeyType="next"
               />
             </View>
 
@@ -101,6 +102,8 @@ export default function LoginScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -178,9 +181,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 40,
   },
   header: {
     alignItems: 'center',

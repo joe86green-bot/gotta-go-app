@@ -12,16 +12,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { User, LogOut, Trash2, Mail, Lock, Phone, X } from 'lucide-react-native';
+import { User, LogOut, Trash2, Mail, Lock, Phone, X, Shield } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
+import { useAdmin, checkIsAdmin } from '@/providers/AdminProvider';
 
-type ModalType = 'email' | 'password' | 'delete' | null;
+type ModalType = 'email' | 'password' | 'delete' | 'admin' | null;
 
 export default function ProfileScreen() {
   const { user, logout, updateUserEmail, updateUserPassword, deleteAccount, phoneNumber } = useAuth();
+  const { settings, updateSettings } = useAdmin();
   const [modalVisible, setModalVisible] = useState<ModalType>(null);
   const [loading, setLoading] = useState(false);
+  const isAdmin = checkIsAdmin(user?.email);
 
   const [newEmail, setNewEmail] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
@@ -31,6 +34,9 @@ export default function ProfileScreen() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
   const [deletePassword, setDeletePassword] = useState('');
+
+  const [schedulingDisabled, setSchedulingDisabled] = useState(settings.schedulingDisabled);
+  const [disabledMessage, setDisabledMessage] = useState(settings.disabledMessage);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -153,6 +159,26 @@ export default function ProfileScreen() {
     setNewPassword('');
     setConfirmNewPassword('');
     setDeletePassword('');
+    setSchedulingDisabled(settings.schedulingDisabled);
+    setDisabledMessage(settings.disabledMessage);
+  };
+
+  const handleUpdateAdminSettings = async () => {
+    setLoading(true);
+    try {
+      await updateSettings({
+        schedulingDisabled,
+        disabledMessage,
+      });
+      Alert.alert('Success', 'Admin settings updated successfully');
+      setModalVisible(null);
+    } catch (error: unknown) {
+      console.error('Update admin settings error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update settings';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -170,6 +196,27 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
+
+        {isAdmin && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Admin Controls</Text>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => setModalVisible('admin')}
+            >
+              <View style={[styles.settingIcon, styles.adminIcon]}>
+                <Shield size={20} color={COLORS.primary} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={styles.settingTitle}>Scheduling Controls</Text>
+                <Text style={styles.settingDescription}>
+                  {settings.schedulingDisabled ? 'Scheduling is disabled' : 'Scheduling is enabled'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Settings</Text>
@@ -242,6 +289,7 @@ export default function ProfileScreen() {
                 {modalVisible === 'email' && 'Change Email'}
                 {modalVisible === 'password' && 'Change Password'}
                 {modalVisible === 'delete' && 'Delete Account'}
+                {modalVisible === 'admin' && 'Admin Controls'}
               </Text>
               <TouchableOpacity onPress={closeModal}>
                 <X size={24} color={COLORS.textSecondary} />
@@ -258,6 +306,7 @@ export default function ProfileScreen() {
                   onChangeText={setNewEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  returnKeyType="next"
                 />
                 <TextInput
                   style={styles.modalInput}
@@ -267,6 +316,8 @@ export default function ProfileScreen() {
                   onChangeText={setEmailPassword}
                   secureTextEntry
                   autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={handleUpdateEmail}
                 />
                 <TouchableOpacity
                   style={[styles.modalButton, loading && styles.disabledButton]}
@@ -292,6 +343,7 @@ export default function ProfileScreen() {
                   onChangeText={setCurrentPassword}
                   secureTextEntry
                   autoCapitalize="none"
+                  returnKeyType="next"
                 />
                 <TextInput
                   style={styles.modalInput}
@@ -301,6 +353,7 @@ export default function ProfileScreen() {
                   onChangeText={setNewPassword}
                   secureTextEntry
                   autoCapitalize="none"
+                  returnKeyType="next"
                 />
                 <TextInput
                   style={styles.modalInput}
@@ -310,6 +363,8 @@ export default function ProfileScreen() {
                   onChangeText={setConfirmNewPassword}
                   secureTextEntry
                   autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={handleUpdatePassword}
                 />
                 <TouchableOpacity
                   style={[styles.modalButton, loading && styles.disabledButton]}
@@ -338,6 +393,8 @@ export default function ProfileScreen() {
                   onChangeText={setDeletePassword}
                   secureTextEntry
                   autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={handleDeleteAccount}
                 />
                 <TouchableOpacity
                   style={[styles.modalButton, styles.deleteButton, loading && styles.disabledButton]}
@@ -348,6 +405,45 @@ export default function ProfileScreen() {
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text style={styles.modalButtonText}>Delete Account</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {modalVisible === 'admin' && (
+              <View style={styles.modalBody}>
+                <View style={styles.adminToggleRow}>
+                  <Text style={styles.adminToggleLabel}>Disable Scheduling</Text>
+                  <TouchableOpacity
+                    style={[styles.adminToggle, schedulingDisabled && styles.adminToggleActive]}
+                    onPress={() => setSchedulingDisabled(!schedulingDisabled)}
+                  >
+                    <Text style={[styles.adminToggleText, schedulingDisabled && styles.adminToggleTextActive]}>
+                      {schedulingDisabled ? 'Disabled' : 'Enabled'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.adminLabel}>Disabled Message</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.adminMessageInput]}
+                  placeholder="Message to show when scheduling is disabled"
+                  placeholderTextColor="#999"
+                  value={disabledMessage}
+                  onChangeText={setDisabledMessage}
+                  multiline
+                  numberOfLines={4}
+                  returnKeyType="done"
+                  blurOnSubmit
+                />
+                <TouchableOpacity
+                  style={[styles.modalButton, loading && styles.disabledButton]}
+                  onPress={handleUpdateAdminSettings}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.modalButtonText}>Update Settings</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -508,5 +604,46 @@ const styles = StyleSheet.create({
     color: '#ff3b30',
     textAlign: 'center',
     marginBottom: 8,
+  },
+  adminIcon: {
+    backgroundColor: '#e3f2fd',
+  },
+  adminToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  adminToggleLabel: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: COLORS.text,
+  },
+  adminToggle: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.border,
+  },
+  adminToggleActive: {
+    backgroundColor: COLORS.primary,
+  },
+  adminToggleText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: COLORS.textSecondary,
+  },
+  adminToggleTextActive: {
+    color: '#fff',
+  },
+  adminLabel: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  adminMessageInput: {
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
 });

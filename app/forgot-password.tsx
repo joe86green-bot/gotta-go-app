@@ -93,6 +93,8 @@ export default function ForgotPasswordScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!emailSent}
+                returnKeyType="done"
+                onSubmitEditing={handleResetPassword}
               />
             </View>
 

@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ScheduledItemsProvider } from "@/providers/ScheduledItemsProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { AdminProvider } from "@/providers/AdminProvider";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,11 +45,13 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ScheduledItemsProvider>
-          <GestureHandlerRootView>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
-        </ScheduledItemsProvider>
+        <AdminProvider>
+          <ScheduledItemsProvider>
+            <GestureHandlerRootView>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </ScheduledItemsProvider>
+        </AdminProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
