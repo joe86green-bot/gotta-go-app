@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -46,13 +47,26 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await signUp(email, password, phoneNumber);
-      setLoading(false);
-      router.replace('/');
-    } catch (error: unknown) {
+      Alert.alert('Success', 'Account created successfully!', [
+        { text: 'OK', onPress: () => router.replace('/') }
+      ]);
+    } catch (error: any) {
       console.error('Registration error:', error);
-      setLoading(false);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to register. Please try again.';
+      let errorMessage = 'Failed to register. Please try again.';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please sign in instead.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       Alert.alert('Registration Failed', errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,9 +79,10 @@ export default function RegisterScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <UserPlus size={48} color={COLORS.primary} />
+            <UserPlus size={36} color={COLORS.primary} />
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>Sign up to get started</Text>
           </View>
@@ -141,7 +156,10 @@ export default function RegisterScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="done"
-                  onSubmitEditing={handleRegister}
+                  onSubmitEditing={() => {
+                    Keyboard.dismiss();
+                    handleRegister();
+                  }}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -187,40 +205,42 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingVertical: 20,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold' as const,
     color: COLORS.text,
-    marginTop: 16,
+    marginTop: 12,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textSecondary,
-    marginTop: 8,
+    marginTop: 4,
   },
   form: {
     width: '100%',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   input: {
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     fontSize: 15,
     color: COLORS.text,
     shadowColor: '#000',
@@ -242,19 +262,19 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     flex: 1,
-    padding: 16,
+    padding: 14,
     fontSize: 15,
     color: COLORS.text,
   },
   eyeButton: {
-    padding: 16,
+    padding: 14,
   },
   registerButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
-    padding: 18,
+    padding: 16,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -265,7 +285,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   registerButtonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold' as const,
     color: '#fff',
   },
@@ -273,7 +293,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 16,
   },
   footerText: {
     fontSize: 14,

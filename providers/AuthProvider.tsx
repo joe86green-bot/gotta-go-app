@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import { 
   User,
@@ -16,7 +16,7 @@ import {
   signInWithCredential
 } from 'firebase/auth';
 import { auth, db } from '@/config/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Platform } from 'react-native';
@@ -48,8 +48,13 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   useEffect(() => {
     const checkAppleSignIn = async () => {
       if (Platform.OS === 'ios') {
-        const available = await AppleAuthentication.isAvailableAsync();
-        setIsAppleSignInAvailable(available);
+        try {
+          const available = await AppleAuthentication.isAvailableAsync();
+          setIsAppleSignInAvailable(available);
+        } catch (error) {
+          console.log('Apple sign in not available:', error);
+          setIsAppleSignInAvailable(false);
+        }
       }
     };
     checkAppleSignIn();
@@ -57,16 +62,27 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('Auth state changed:', firebaseUser?.email);
+      console.log('Auth state changed:', firebaseUser?.email || 'No user');
       setUser(firebaseUser);
       
       if (firebaseUser) {
         setIsGuest(false);
-        const storedPhone = await AsyncStorage.getItem(`phone_${firebaseUser.uid}`);
-        setPhoneNumber(storedPhone);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setPhoneNumber(userData.phoneNumber || null);
+          }
+        } catch (error) {
+          console.log('Error fetching user data:', error);
+        }
       } else {
-        const guestMode = await AsyncStorage.getItem('guest_mode');
-        setIsGuest(guestMode === 'true');
+        try {
+          const guestMode = await AsyncStorage.getItem('guest_mode');
+          setIsGuest(guestMode === 'true');
+        } catch (error) {
+          console.log('Error checking guest mode:', error);
+        }
       }
       
       setLoading(false);
@@ -76,193 +92,116 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, phone: string) => {
-    try {
-      console.log('Starting sign up process...');
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('User created in Firebase Auth:', userCredential.user.uid);
-      
-      await AsyncStorage.setItem(`phone_${userCredential.user.uid}`, phone);
-      setPhoneNumber(phone);
-      console.log('Phone number saved to AsyncStorage');
-      
-      try {
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          email: userCredential.user.email,
-          phoneNumber: phone,
-          createdAt: serverTimestamp(),
-          uid: userCredential.user.uid,
-        });
-        console.log('User data saved to Firestore');
-      } catch (firestoreError) {
-        console.warn('Failed to save to Firestore, but user account created:', firestoreError);
-      }
-      
-      await AsyncStorage.removeItem('guest_mode');
-      console.log('User signed up successfully:', userCredential.user.email);
-    } catch (error: unknown) {
-      console.error('Sign up error:', error);
-      if (error && typeof error === 'object' && 'code' in error) {
-        const firebaseError = error as { code: string; message: string };
-        switch (firebaseError.code) {
-          case 'auth/email-already-in-use':
-            throw new Error('This email is already registered. Please sign in instead.');
-          case 'auth/invalid-email':
-            throw new Error('Invalid email address.');
-          case 'auth/weak-password':
-            throw new Error('Password is too weak. Please use a stronger password.');
-          default:
-            throw new Error(firebaseError.message || 'Failed to create account.');
-        }
-      }
-      throw error;
-    }
+    console.log('Starting sign up...');
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log('User created:', userCredential.user.uid);
+    
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
+      email: userCredential.user.email,
+      phoneNumber: phone,
+      createdAt: new Date().toISOString(),
+      uid: userCredential.user.uid,
+    });
+    console.log('User data saved');
+    
+    setPhoneNumber(phone);
+    await AsyncStorage.removeItem('guest_mode');
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const storedPhone = await AsyncStorage.getItem(`phone_${userCredential.user.uid}`);
-      setPhoneNumber(storedPhone);
-      await AsyncStorage.removeItem('guest_mode');
-      console.log('User signed in:', userCredential.user.email);
-    } catch (error: unknown) {
-      console.error('Sign in error:', error);
-      if (error && typeof error === 'object' && 'code' in error) {
-        const firebaseError = error as { code: string; message: string };
-        switch (firebaseError.code) {
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-          case 'auth/invalid-credential':
-            throw new Error('Invalid email or password.');
-          case 'auth/invalid-email':
-            throw new Error('Invalid email address.');
-          case 'auth/too-many-requests':
-            throw new Error('Too many failed attempts. Please try again later.');
-          default:
-            throw new Error(firebaseError.message || 'Failed to sign in.');
-        }
-      }
-      throw error;
+    console.log('Starting sign in...');
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log('User signed in:', userCredential.user.uid);
+    
+    const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      setPhoneNumber(userData.phoneNumber || null);
     }
+    
+    await AsyncStorage.removeItem('guest_mode');
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await signOut(auth);
-      setPhoneNumber(null);
-      setIsGuest(false);
-      await AsyncStorage.removeItem('guest_mode');
-      console.log('User logged out');
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
-    }
+    await signOut(auth);
+    setPhoneNumber(null);
+    setIsGuest(false);
+    await AsyncStorage.removeItem('guest_mode');
+    console.log('User logged out');
   }, []);
 
   const continueAsGuest = useCallback(async () => {
-    try {
-      await AsyncStorage.setItem('guest_mode', 'true');
-      setIsGuest(true);
-      console.log('Continuing as guest');
-    } catch (error) {
-      console.error('Guest mode error:', error);
-      throw error;
-    }
+    await AsyncStorage.setItem('guest_mode', 'true');
+    setIsGuest(true);
+    console.log('Continuing as guest');
   }, []);
 
   const signInWithApple = useCallback(async () => {
-    try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
 
-      const { identityToken } = credential;
-      if (!identityToken) {
-        throw new Error('No identity token returned from Apple');
-      }
-
-      const provider = new OAuthProvider('apple.com');
-      const firebaseCredential = provider.credential({
-        idToken: identityToken,
-      });
-
-      const userCredential = await signInWithCredential(auth, firebaseCredential);
-      await AsyncStorage.removeItem('guest_mode');
-      console.log('User signed in with Apple:', userCredential.user.email);
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error) {
-        const appleError = error as { code: string };
-        if (appleError.code === 'ERR_REQUEST_CANCELED') {
-          console.log('Apple sign in canceled');
-          return;
-        }
-      }
-      console.error('Apple sign in error:', error);
-      throw error;
+    const { identityToken } = credential;
+    if (!identityToken) {
+      throw new Error('No identity token returned from Apple');
     }
+
+    const provider = new OAuthProvider('apple.com');
+    const firebaseCredential = provider.credential({
+      idToken: identityToken,
+    });
+
+    const userCredential = await signInWithCredential(auth, firebaseCredential);
+    
+    const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+    if (!userDoc.exists()) {
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email: userCredential.user.email,
+        createdAt: new Date().toISOString(),
+        uid: userCredential.user.uid,
+      });
+    }
+    
+    await AsyncStorage.removeItem('guest_mode');
+    console.log('User signed in with Apple');
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      console.log('Password reset email sent to:', email);
-    } catch (error) {
-      console.error('Password reset error:', error);
-      throw error;
-    }
+    await sendPasswordResetEmail(auth, email);
+    console.log('Password reset email sent');
   }, []);
 
   const updateUserEmail = useCallback(async (newEmail: string, currentPassword: string) => {
     if (!user || !user.email) throw new Error('No user logged in');
     
-    try {
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      await updateEmail(user, newEmail);
-      console.log('Email updated successfully');
-    } catch (error) {
-      console.error('Update email error:', error);
-      throw error;
-    }
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+    await updateEmail(user, newEmail);
+    console.log('Email updated');
   }, [user]);
 
   const updateUserPassword = useCallback(async (currentPassword: string, newPassword: string) => {
     if (!user || !user.email) throw new Error('No user logged in');
     
-    try {
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
-      console.log('Password updated successfully');
-    } catch (error) {
-      console.error('Update password error:', error);
-      throw error;
-    }
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+    await updatePassword(user, newPassword);
+    console.log('Password updated');
   }, [user]);
 
   const deleteAccount = useCallback(async (password: string) => {
     if (!user || !user.email) throw new Error('No user logged in');
     
-    try {
-      const credential = EmailAuthProvider.credential(user.email, password);
-      await reauthenticateWithCredential(user, credential);
-      
-      if (user.uid) {
-        await AsyncStorage.removeItem(`phone_${user.uid}`);
-      }
-      
-      await deleteUser(user);
-      console.log('Account deleted successfully');
-    } catch (error) {
-      console.error('Delete account error:', error);
-      throw error;
-    }
+    const credential = EmailAuthProvider.credential(user.email, password);
+    await reauthenticateWithCredential(user, credential);
+    await deleteUser(user);
+    console.log('Account deleted');
   }, [user]);
 
-  return useMemo(() => ({
+  return {
     user,
     isGuest,
     loading,
@@ -277,5 +216,5 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
     deleteAccount,
     phoneNumber,
     isAppleSignInAvailable,
-  }), [user, isGuest, loading, signUp, signIn, signInWithApple, resetPassword, logout, continueAsGuest, updateUserEmail, updateUserPassword, deleteAccount, phoneNumber, isAppleSignInAvailable]);
+  };
 });

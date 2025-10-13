@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -35,9 +36,18 @@ export default function LoginScreen() {
     try {
       await signIn(email, password);
       router.replace('/');
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to login';
+      let errorMessage = 'Failed to login';
+      
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = 'Invalid email or password';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
@@ -49,10 +59,11 @@ export default function LoginScreen() {
     try {
       await signInWithApple();
       router.replace('/');
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Apple sign in error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Apple';
-      Alert.alert('Sign In Failed', errorMessage);
+      if (error.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Sign In Failed', error.message || 'Failed to sign in with Apple');
+      }
     } finally {
       setAppleLoading(false);
     }
@@ -104,7 +115,10 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="done"
-                  onSubmitEditing={handleLogin}
+                  onSubmitEditing={() => {
+                    Keyboard.dismiss();
+                    handleLogin();
+                  }}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
