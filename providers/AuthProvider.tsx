@@ -68,16 +68,28 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const loadMaintenanceMode = async () => {
     try {
+      console.log('🔧 [MAINTENANCE] Loading maintenance mode...');
       const maintenanceDoc = await getDoc(doc(db, 'settings', 'maintenance'));
       if (maintenanceDoc.exists()) {
         const data = maintenanceDoc.data();
+        console.log('✅ [MAINTENANCE] Loaded:', data);
         setMaintenanceMode({
           enabled: data.enabled || false,
           message: data.message || 'Service temporarily unavailable',
         });
+      } else {
+        console.log('ℹ️ [MAINTENANCE] No maintenance document found, using defaults');
+        setMaintenanceMode({ enabled: false, message: '' });
       }
-    } catch (error) {
-      console.error('Error loading maintenance mode:', error);
+    } catch (error: any) {
+      console.error('❌ [MAINTENANCE] Error loading maintenance mode:', error);
+      console.error('❌ [MAINTENANCE] Error code:', error?.code);
+      console.error('❌ [MAINTENANCE] Error message:', error?.message);
+      
+      if (error?.code === 'unavailable') {
+        console.log('ℹ️ [MAINTENANCE] Client is offline, using default maintenance mode');
+        setMaintenanceMode({ enabled: false, message: '' });
+      }
     }
   };
 
