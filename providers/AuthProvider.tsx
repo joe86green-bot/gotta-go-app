@@ -90,8 +90,21 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
       
       await AsyncStorage.removeItem('guest_mode');
       console.log('User signed up:', userCredential.user.email);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Sign up error:', error);
+      if (error && typeof error === 'object' && 'code' in error) {
+        const firebaseError = error as { code: string; message: string };
+        switch (firebaseError.code) {
+          case 'auth/email-already-in-use':
+            throw new Error('This email is already registered. Please sign in instead.');
+          case 'auth/invalid-email':
+            throw new Error('Invalid email address.');
+          case 'auth/weak-password':
+            throw new Error('Password is too weak. Please use a stronger password.');
+          default:
+            throw new Error(firebaseError.message || 'Failed to create account.');
+        }
+      }
       throw error;
     }
   }, []);
@@ -103,8 +116,23 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
       setPhoneNumber(storedPhone);
       await AsyncStorage.removeItem('guest_mode');
       console.log('User signed in:', userCredential.user.email);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Sign in error:', error);
+      if (error && typeof error === 'object' && 'code' in error) {
+        const firebaseError = error as { code: string; message: string };
+        switch (firebaseError.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            throw new Error('Invalid email or password.');
+          case 'auth/invalid-email':
+            throw new Error('Invalid email address.');
+          case 'auth/too-many-requests':
+            throw new Error('Too many failed attempts. Please try again later.');
+          default:
+            throw new Error(firebaseError.message || 'Failed to sign in.');
+        }
+      }
       throw error;
     }
   }, []);

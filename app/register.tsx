@@ -46,13 +46,14 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await signUp(email, password, phoneNumber);
-      router.replace('/');
+      Alert.alert('Success', 'Account created successfully!', [
+        { text: 'OK', onPress: () => router.replace('/') }
+      ]);
     } catch (error: unknown) {
       console.error('Registration error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to register';
-      Alert.alert('Registration Failed', errorMessage);
-    } finally {
       setLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to register. Please try again.';
+      Alert.alert('Registration Failed', errorMessage);
     }
   };
 
