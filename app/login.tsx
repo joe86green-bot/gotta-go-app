@@ -35,11 +35,11 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(email.trim(), password);
+      setIsLoading(false);
       router.replace('/');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid credentials');
-    } finally {
       setIsLoading(false);
+      Alert.alert('Login Failed', error.message || 'Invalid credentials');
     }
   };
 

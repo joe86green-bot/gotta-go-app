@@ -48,13 +48,13 @@ export default function RegisterScreen() {
     setIsLoading(true);
     try {
       await register(email.trim(), password, phone.trim());
+      setIsLoading(false);
       Alert.alert('Success', 'Account created successfully!', [
         { text: 'OK', onPress: () => router.replace('/') }
       ]);
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message || 'Failed to create account');
-    } finally {
       setIsLoading(false);
+      Alert.alert('Registration Failed', error.message || 'Failed to create account');
     }
   };
 

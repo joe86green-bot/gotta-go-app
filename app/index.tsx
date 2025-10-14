@@ -118,9 +118,12 @@ export default function HomeScreen() {
         const maintenanceDoc = await getDoc(doc(db, 'settings', 'maintenance'));
         if (maintenanceDoc.exists()) {
           setMaintenanceMode(maintenanceDoc.data() as { enabled: boolean; message: string });
+        } else {
+          setMaintenanceMode({ enabled: false, message: '' });
         }
       } catch (error) {
         console.error('Error loading maintenance mode:', error);
+        setMaintenanceMode({ enabled: false, message: '' });
       } finally {
         setIsLoadingMaintenance(false);
       }
