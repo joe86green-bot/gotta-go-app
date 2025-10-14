@@ -4,13 +4,32 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ScheduledItemsProvider } from "@/providers/ScheduledItemsProvider";
-import { AuthProvider } from "@/providers/AuthProvider";
+import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const { loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      console.log('🟢 [LAYOUT] Auth loaded, hiding splash screen');
+      SplashScreen.hideAsync();
+    }
+  }, [loading]);
+
+  if (loading) {
+    console.log('🟡 [LAYOUT] Still loading auth, showing splash...');
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -52,16 +71,21 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+});
 
+export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ScheduledItemsProvider>
-          <GestureHandlerRootView>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <RootLayoutNav />
           </GestureHandlerRootView>
         </ScheduledItemsProvider>
