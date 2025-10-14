@@ -30,29 +30,46 @@ export default function RegisterScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
+    console.log('🚀 Register button pressed');
+    
     if (!email.trim() || !phone.trim() || !password.trim() || !confirmPassword.trim()) {
+      console.log('❌ Validation failed: Missing fields');
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
+      console.log('❌ Validation failed: Passwords do not match');
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
+      console.log('❌ Validation failed: Password too short');
       Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
+    console.log('✅ Validation passed, starting registration...');
     setIsLoading(true);
     try {
+      console.log('📝 Calling register function...');
       await register(email.trim(), password, phone.trim());
+      console.log('✅ Register function completed successfully');
       setIsLoading(false);
+      console.log('🎉 Showing success alert and navigating to home...');
       Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.replace('/') }
+        { 
+          text: 'OK', 
+          onPress: () => {
+            console.log('✅ User pressed OK, navigating to home...');
+            router.replace('/');
+            console.log('✅ Navigation command sent');
+          }
+        }
       ]);
     } catch (error: any) {
+      console.error('❌ Registration failed:', error);
       setIsLoading(false);
       Alert.alert('Registration Failed', error.message || 'Failed to create account');
     }

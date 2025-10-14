@@ -27,17 +27,26 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
+    console.log('🚀 Login button pressed');
+    
     if (!email.trim() || !password.trim()) {
+      console.log('❌ Validation failed: Missing email or password');
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
 
+    console.log('✅ Validation passed, starting login...');
     setIsLoading(true);
     try {
+      console.log('🔑 Calling login function...');
       await login(email.trim(), password);
+      console.log('✅ Login function completed successfully');
       setIsLoading(false);
+      console.log('🏠 Navigating to home...');
       router.replace('/');
+      console.log('✅ Navigation command sent');
     } catch (error: any) {
+      console.error('❌ Login failed:', error);
       setIsLoading(false);
       Alert.alert('Login Failed', error.message || 'Invalid credentials');
     }

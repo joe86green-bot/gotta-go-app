@@ -48,26 +48,34 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
+    console.log('🔐 Setting up auth state listener...');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('Auth state changed:', firebaseUser?.email);
+      console.log('🔐 Auth state changed:', firebaseUser?.email || 'No user');
       setUser(firebaseUser);
       
       if (firebaseUser) {
         try {
+          console.log('📄 Loading user profile for:', firebaseUser.uid);
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             const profile = userDoc.data() as UserProfile;
             setUserProfile(profile);
-            console.log('User profile loaded:', profile.email, 'isAdmin:', profile.isAdmin);
+            console.log('✅ User profile loaded:', profile.email, 'isAdmin:', profile.isAdmin);
+          } else {
+            console.warn('⚠️ User document does not exist for:', firebaseUser.uid);
           }
-        } catch (error) {
-          console.error('Error loading user profile:', error);
+        } catch (error: any) {
+          console.error('❌ Error loading user profile:', error);
+          console.error('Error code:', error?.code);
+          console.error('Error message:', error?.message);
         }
         setIsGuest(false);
       } else {
+        console.log('👤 No user logged in');
         setUserProfile(null);
       }
       
+      console.log('✅ Auth state processing complete, setting isLoading to false');
       setIsLoading(false);
     });
 
@@ -76,8 +84,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const register = useCallback(async (email: string, password: string, phone: string) => {
     try {
-      console.log('Registering user:', email);
+      console.log('📝 Starting registration for:', email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('✅ Firebase auth user created:', userCredential.user.uid);
       
       const isAdmin = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
       
@@ -88,31 +97,42 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         isAdmin,
       };
 
+      console.log('💾 Saving user profile to Firestore...');
       await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
-      console.log('User profile created:', email, 'isAdmin:', isAdmin);
+      console.log('✅ User profile created in Firestore:', email, 'isAdmin:', isAdmin);
       
       setUserProfile(userProfile);
+      console.log('✅ Registration complete!');
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('❌ Registration error:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
       throw new Error(error.message || 'Failed to register');
     }
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     try {
-      console.log('Logging in user:', email);
+      console.log('🔑 Starting login for:', email);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('✅ Firebase auth successful:', userCredential.user.uid);
       
+      console.log('📄 Loading user profile from Firestore...');
       const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
       if (userDoc.exists()) {
         const profile = userDoc.data() as UserProfile;
         setUserProfile(profile);
-        console.log('User logged in:', profile.email, 'isAdmin:', profile.isAdmin);
+        console.log('✅ User logged in:', profile.email, 'isAdmin:', profile.isAdmin);
+      } else {
+        console.warn('⚠️ User profile not found in Firestore');
       }
       
       setIsGuest(false);
+      console.log('✅ Login complete!');
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
       throw new Error(error.message || 'Failed to login');
     }
   }, []);

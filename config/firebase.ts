@@ -12,6 +12,7 @@ const firebaseConfig = {
   appId: "1:721047577523:web:ede1a07db16a03ea3121c6"
 };
 
+console.log('🔥 Initializing Firebase...');
 const app = initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
@@ -21,11 +22,13 @@ const db = getFirestore(app);
 if (Platform.OS === 'web') {
   enableIndexedDbPersistence(db).catch((err) => {
     if (err.code === 'failed-precondition') {
-      console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+      console.warn('⚠️ Multiple tabs open, persistence can only be enabled in one tab at a time.');
     } else if (err.code === 'unimplemented') {
-      console.warn('The current browser does not support persistence.');
+      console.warn('⚠️ The current browser does not support persistence.');
     }
   });
 }
+
+console.log('✅ Firebase initialized successfully');
 
 export { auth, db };

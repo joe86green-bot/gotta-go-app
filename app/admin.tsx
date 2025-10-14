@@ -61,15 +61,21 @@ export default function AdminScreen() {
 
   const loadMaintenanceMode = async () => {
     try {
+      console.log('🔧 Loading maintenance mode settings...');
       const maintenanceDoc = await getDoc(doc(db, 'settings', 'maintenance'));
       if (maintenanceDoc.exists()) {
         const data = maintenanceDoc.data() as MaintenanceMode;
         setMaintenanceMode(data);
+        console.log('✅ Maintenance mode loaded:', data);
+      } else {
+        console.log('ℹ️ No maintenance mode document found, using defaults');
       }
     } catch (error: any) {
-      console.error('Error loading maintenance mode:', error);
+      console.error('❌ Error loading maintenance mode:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
       if (error?.code === 'unavailable') {
-        console.log('Firebase is offline, using default maintenance settings');
+        console.log('⚠️ Firebase is offline, using default maintenance settings');
       }
     }
   };
