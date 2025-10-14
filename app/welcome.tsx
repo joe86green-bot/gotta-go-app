@@ -3,85 +3,119 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { LogIn, UserPlus, Eye } from 'lucide-react-native';
+import { Phone, MessageSquare, Clock, Shield, Zap, ArrowRight } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
-import { useAuth } from '@/providers/AuthProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function WelcomeScreen() {
-  const { continueAsGuest } = useAuth();
-
-  const handleGuestMode = async () => {
-    try {
-      await continueAsGuest();
-      router.replace('/');
-    } catch (error) {
-      console.error('Guest mode error:', error);
-    }
+  const handleGetStarted = async () => {
+    await AsyncStorage.setItem('hasSeenWelcome', 'true');
+    router.replace('/login');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
-          <Text style={styles.logo}>Gotta Go</Text>
-          <Text style={styles.tagline}>Your emergency escape plan</Text>
+          <View style={styles.logoContainer}>
+            <View style={styles.logo}>
+              <Phone size={48} color={COLORS.primary} strokeWidth={2.5} />
+            </View>
+          </View>
+          <Text style={styles.title}>Gotta Go</Text>
+          <Text style={styles.tagline}>Your Emergency Escape Plan</Text>
         </View>
 
-        <View style={styles.features}>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>📞</Text>
-            <Text style={styles.featureTitle}>Scheduled Calls</Text>
+        <View style={styles.heroSection}>
+          <Text style={styles.heroTitle}>
+            Need an excuse to leave?{'\n'}We&apos;ve got you covered.
+          </Text>
+          <Text style={styles.heroDescription}>
+            Schedule a fake call or text to help you gracefully exit any awkward situation.
+          </Text>
+        </View>
+
+        <View style={styles.featuresSection}>
+          <View style={styles.featureCard}>
+            <View style={[styles.featureIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Phone size={28} color="#1976D2" />
+            </View>
+            <Text style={styles.featureTitle}>Realistic Calls</Text>
             <Text style={styles.featureDescription}>
-              Get a call at the perfect time to escape any situation
+              Choose from pre-recorded messages that sound authentic and convincing.
             </Text>
           </View>
 
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>💬</Text>
-            <Text style={styles.featureTitle}>Emergency Texts</Text>
+          <View style={styles.featureCard}>
+            <View style={[styles.featureIcon, { backgroundColor: '#F3E5F5' }]}>
+              <MessageSquare size={28} color="#7B1FA2" />
+            </View>
+            <Text style={styles.featureTitle}>Custom Texts</Text>
             <Text style={styles.featureDescription}>
-              Receive convincing text messages when you need them
+              Send yourself a text with any excuse you need at the perfect moment.
             </Text>
           </View>
 
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>⚡</Text>
+          <View style={styles.featureCard}>
+            <View style={[styles.featureIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Clock size={28} color="#F57C00" />
+            </View>
+            <Text style={styles.featureTitle}>Perfect Timing</Text>
+            <Text style={styles.featureDescription}>
+              Schedule your escape for exactly when you need it with quick presets.
+            </Text>
+          </View>
+
+          <View style={styles.featureCard}>
+            <View style={[styles.featureIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Shield size={28} color="#388E3C" />
+            </View>
+            <Text style={styles.featureTitle}>Stealth Mode</Text>
+            <Text style={styles.featureDescription}>
+              Hide the app from recent apps after scheduling for extra discretion.
+            </Text>
+          </View>
+
+          <View style={styles.featureCard}>
+            <View style={[styles.featureIcon, { backgroundColor: '#FCE4EC' }]}>
+              <Zap size={28} color="#C2185B" />
+            </View>
             <Text style={styles.featureTitle}>Quick Escape</Text>
             <Text style={styles.featureDescription}>
-              Set up your exit in seconds with preset timings
+              One-tap presets for 5, 15, or 30 minutes when you need to leave fast.
             </Text>
           </View>
         </View>
 
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push('/register')}
-          >
-            <UserPlus size={20} color="#fff" />
-            <Text style={styles.primaryButtonText}>Create Account</Text>
-          </TouchableOpacity>
+        <View style={styles.storySection}>
+          <Text style={styles.storyTitle}>Our Story</Text>
+          <Text style={styles.storyText}>
+            Originally created as a fun gift for a friend back in 2021, Gotta Go unexpectedly became a handy escape plan for many! 
+          </Text>
+          <Text style={styles.storyText}>
+            After a little break, we&apos;re excited to bring it back, fully recharged and ready to help you make a smooth exit from any awkward situation.
+          </Text>
+        </View>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.push('/login')}
-          >
-            <LogIn size={20} color={COLORS.primary} />
-            <Text style={styles.secondaryButtonText}>Sign In</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.getStartedButton}
+          onPress={handleGetStarted}
+        >
+          <Text style={styles.getStartedButtonText}>Get Started</Text>
+          <ArrowRight size={20} color="#fff" />
+        </TouchableOpacity>
 
-          <TouchableOpacity style={styles.guestButton} onPress={handleGuestMode}>
-            <Eye size={16} color={COLORS.textSecondary} />
-            <Text style={styles.guestButtonText}>View as Guest</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.guestNote}>
-            Guest mode lets you explore features, but you need an account to use them
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Your privacy matters. All data is stored securely.
           </Text>
         </View>
       </ScrollView>
@@ -94,105 +128,137 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 40,
   },
-  logo: {
-    fontSize: 42,
-    fontWeight: 'bold' as const,
-    color: COLORS.primary,
-    marginBottom: 4,
-  },
-  tagline: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  features: {
-    marginBottom: 24,
-  },
-  featureItem: {
-    alignItems: 'center',
+  logoContainer: {
     marginBottom: 20,
   },
-  featureIcon: {
-    fontSize: 40,
-    marginBottom: 6,
-  },
-  featureTitle: {
-    fontSize: 17,
-    fontWeight: '600' as const,
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  featureDescription: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  actions: {
-    gap: 12,
-  },
-  primaryButton: {
-    flexDirection: 'row',
+  logo: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    padding: 16,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
-  primaryButtonText: {
-    fontSize: 17,
+  title: {
+    fontSize: 40,
     fontWeight: 'bold' as const,
-    color: '#fff',
+    color: COLORS.primary,
+    marginBottom: 8,
   },
-  secondaryButton: {
+  tagline: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    fontWeight: '500' as const,
+  },
+  heroSection: {
+    marginBottom: 40,
+    alignItems: 'center',
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: 'bold' as const,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 36,
+  },
+  heroDescription: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  featuresSection: {
+    marginBottom: 40,
+  },
+  featureCard: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  featureIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  featureDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  storySection: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 32,
+  },
+  storyTitle: {
+    fontSize: 22,
+    fontWeight: 'bold' as const,
+    color: COLORS.primary,
+    marginBottom: 16,
+  },
+  storyText: {
+    fontSize: 15,
+    color: COLORS.text,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  getStartedButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+    marginBottom: 24,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  secondaryButtonText: {
-    fontSize: 17,
+  getStartedButtonText: {
+    fontSize: 18,
     fontWeight: 'bold' as const,
-    color: COLORS.primary,
+    color: '#fff',
   },
-  guestButton: {
-    flexDirection: 'row',
+  footer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    padding: 10,
-    marginTop: 4,
   },
-  guestButtonText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: '500' as const,
-  },
-  guestNote: {
-    fontSize: 11,
+  footerText: {
+    fontSize: 12,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginTop: 4,
-    paddingHorizontal: 20,
   },
 });
