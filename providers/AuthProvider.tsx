@@ -29,7 +29,6 @@ interface AuthContextValue {
   isLoading: boolean;
   isGuest: boolean;
   isAdmin: boolean;
-  hasSeenWelcome: boolean;
   register: (email: string, password: string, phone: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -37,7 +36,6 @@ interface AuthContextValue {
   updateUserPassword: (newPassword: string, currentPassword: string) => Promise<void>;
   deleteAccount: (currentPassword: string) => Promise<void>;
   continueAsGuest: () => void;
-  markWelcomeSeen: () => Promise<void>;
   getAllUsers: () => Promise<{ email: string; phone: string; createdAt: string }[]>;
   getUserCount: () => Promise<number>;
 }
@@ -49,28 +47,19 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
-  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
 
   useEffect(() => {
-    const loadPersistedData = async () => {
+    const loadGuestStatus = async () => {
       try {
-        const [guestStatus, welcomeStatus] = await Promise.all([
-          AsyncStorage.getItem('isGuest'),
-          AsyncStorage.getItem('hasSeenWelcome')
-        ]);
-        
+        const guestStatus = await AsyncStorage.getItem('isGuest');
         if (guestStatus === 'true') {
           setIsGuest(true);
         }
-        
-        if (welcomeStatus === 'true') {
-          setHasSeenWelcome(true);
-        }
       } catch (error) {
-        console.error('Error loading persisted data:', error);
+        console.error('Error loading guest status:', error);
       }
     };
-    loadPersistedData();
+    loadGuestStatus();
   }, []);
 
   useEffect(() => {
@@ -129,7 +118,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       console.log('✅ User profile created in Firestore:', email, 'isAdmin:', isAdmin);
       
       setUserProfile(userProfile);
-      await AsyncStorage.setItem('hasSeenWelcome', 'true');
       console.log('✅ Registration complete!');
     } catch (error: any) {
       console.error('❌ Registration error:', error);
@@ -156,7 +144,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       }
       
       setIsGuest(false);
-      await AsyncStorage.setItem('hasSeenWelcome', 'true');
       console.log('✅ Login complete!');
     } catch (error: any) {
       console.error('❌ Login error:', error);
@@ -234,15 +221,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const continueAsGuest = useCallback(async () => {
     setIsGuest(true);
     setIsLoading(false);
-    await Promise.all([
-      AsyncStorage.setItem('isGuest', 'true'),
-      AsyncStorage.setItem('hasSeenWelcome', 'true')
-    ]);
-  }, []);
-
-  const markWelcomeSeen = useCallback(async () => {
-    setHasSeenWelcome(true);
-    await AsyncStorage.setItem('hasSeenWelcome', 'true');
+    await AsyncStorage.setItem('isGuest', 'true');
   }, []);
 
   const getAllUsers = useCallback(async (): Promise<{ email: string; phone: string; createdAt: string }[]> => {
@@ -283,7 +262,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     isLoading,
     isGuest,
     isAdmin,
-    hasSeenWelcome,
     register,
     login,
     logout,
@@ -291,8 +269,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     updateUserPassword,
     deleteAccount,
     continueAsGuest,
-    markWelcomeSeen,
     getAllUsers,
     getUserCount,
-  }), [user, userProfile, isLoading, isGuest, isAdmin, hasSeenWelcome, register, login, logout, updateUserEmail, updateUserPassword, deleteAccount, continueAsGuest, markWelcomeSeen, getAllUsers, getUserCount]);
+  }), [user, userProfile, isLoading, isGuest, isAdmin, register, login, logout, updateUserEmail, updateUserPassword, deleteAccount, continueAsGuest, getAllUsers, getUserCount]);
 });

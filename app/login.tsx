@@ -20,7 +20,7 @@ import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function LoginScreen() {
-  const { login, continueAsGuest, markWelcomeSeen } = useAuth();
+  const { login, continueAsGuest } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -52,8 +52,7 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGuestMode = async () => {
-    await markWelcomeSeen();
+  const handleGuestMode = () => {
     continueAsGuest();
     router.replace('/');
   };
