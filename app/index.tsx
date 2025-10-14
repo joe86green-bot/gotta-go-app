@@ -15,7 +15,7 @@ import {
   AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Phone, MessageSquare, Play, Pause, Check, Calendar, Clock, Save, Info, List, X, Eye, EyeOff, Shuffle, Zap } from 'lucide-react-native';
+import { Phone, MessageSquare, Play, Pause, Check, Calendar, Clock, Save, Info, List, X, Eye, EyeOff, Shuffle, Zap, User, Settings as SettingsIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,10 +25,14 @@ import { COLORS } from '@/constants/colors';
 import { RECORDINGS } from '@/constants/recordings';
 import { scheduleCall, scheduleText } from '@/services/clicksend';
 import { useScheduledItems } from '@/providers/ScheduledItemsProvider';
+import { useAuth } from '@/providers/AuthProvider';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/config/firebase';
 
 type TabType = 'call' | 'text';
 
 export default function HomeScreen() {
+  const { user, isGuest, isAdmin, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('call');
   const [selectedRecording, setSelectedRecording] = useState<number | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
@@ -62,6 +66,8 @@ export default function HomeScreen() {
   const [maxRetries, setMaxRetries] = useState(3);
   const [enableRandomTiming, setEnableRandomTiming] = useState(false);
   const [stealthMode, setStealthMode] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState<{ enabled: boolean; message: string } | null>(null);
+  const [isLoadingMaintenance, setIsLoadingMaintenance] = useState(true);
   const soundRef = useRef<Audio.Sound | null>(null);
   const { addScheduledItem } = useScheduledItems();
 
@@ -105,6 +111,28 @@ export default function HomeScreen() {
       setTextMessage(randomExcuses[newIndex]);
     }
   }, [activeTab, randomExcuses]);
+
+  useEffect(() => {
+    const loadMaintenanceMode = async () => {
+      try {
+        const maintenanceDoc = await getDoc(doc(db, 'settings', 'maintenance'));
+        if (maintenanceDoc.exists()) {
+          setMaintenanceMode(maintenanceDoc.data() as { enabled: boolean; message: string });
+        }
+      } catch (error) {
+        console.error('Error loading maintenance mode:', error);
+      } finally {
+        setIsLoadingMaintenance(false);
+      }
+    };
+    loadMaintenanceMode();
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && !user && !isGuest) {
+      router.replace('/login');
+    }
+  }, [user, isGuest, authLoading]);
 
   const CALL_SENDER_NUMBER = '+1 (818) 643-6090';
   const TEXT_SENDER_NUMBER = '+1 (833) 962-4030';
@@ -171,6 +199,23 @@ export default function HomeScreen() {
   };
 
   const handleSchedule = async () => {
+    if (isGuest) {
+      Alert.alert(
+        'Login Required',
+        'Please login or create an account to use this feature',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login', onPress: () => router.push('/login') },
+        ]
+      );
+      return;
+    }
+
+    if (maintenanceMode?.enabled) {
+      Alert.alert('Maintenance Mode', maintenanceMode.message);
+      return;
+    }
+
     if (!phoneNumber || phoneNumber.length < 10) {
       Alert.alert('Error', 'Please enter a valid phone number');
       return;
@@ -292,12 +337,34 @@ export default function HomeScreen() {
               <Text style={styles.title}>Gotta Go</Text>
               <Text style={styles.subtitle}>Your emergency escape plan</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.headerButton}
-              onPress={() => router.push('/scheduled-items')}
-            >
-              <List size={24} color={COLORS.primary} />
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              {isAdmin && (
+                <TouchableOpacity 
+                  style={styles.headerButton}
+                  onPress={() => router.push('/admin')}
+                >
+                  <SettingsIcon size={24} color={COLORS.primary} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => router.push('/scheduled-items')}
+              >
+                <List size={24} color={COLORS.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => {
+                  if (isGuest) {
+                    router.push('/login');
+                  } else {
+                    router.push('/account');
+                  }
+                }}
+              >
+                <User size={24} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -955,6 +1022,10 @@ const styles = StyleSheet.create({
   headerCenter: {
     alignItems: 'center',
     flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 8,
   },
   modalOverlay: {
     flex: 1,

@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ScheduledItemsProvider } from "@/providers/ScheduledItemsProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,6 +28,32 @@ function RootLayoutNav() {
           headerShown: true 
         }} 
       />
+      <Stack.Screen 
+        name="login" 
+        options={{ 
+          headerShown: false 
+        }} 
+      />
+      <Stack.Screen 
+        name="register" 
+        options={{ 
+          headerShown: false 
+        }} 
+      />
+      <Stack.Screen 
+        name="account" 
+        options={{ 
+          title: "Account",
+          headerShown: true 
+        }} 
+      />
+      <Stack.Screen 
+        name="admin" 
+        options={{ 
+          title: "Admin Panel",
+          headerShown: true 
+        }} 
+      />
     </Stack>
   );
 }
@@ -38,11 +65,13 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ScheduledItemsProvider>
-        <GestureHandlerRootView>
-          <RootLayoutNav />
-        </GestureHandlerRootView>
-      </ScheduledItemsProvider>
+      <AuthProvider>
+        <ScheduledItemsProvider>
+          <GestureHandlerRootView>
+            <RootLayoutNav />
+          </GestureHandlerRootView>
+        </ScheduledItemsProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

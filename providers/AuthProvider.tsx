@@ -4,188 +4,129 @@ import {
   User,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
+  signOut,
   onAuthStateChanged,
-  updateEmail as firebaseUpdateEmail,
-  updatePassword as firebaseUpdatePassword,
-  deleteUser as firebaseDeleteUser,
+  updateEmail,
+  updatePassword,
+  deleteUser,
   EmailAuthProvider,
-  reauthenticateWithCredential,
+  reauthenticateWithCredential
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface UserProfile {
   email: string;
   phone: string;
-  createdAt: Date;
+  createdAt: string;
   isAdmin: boolean;
 }
 
-interface MaintenanceMode {
-  enabled: boolean;
-  message: string;
+interface AuthContextValue {
+  user: User | null;
+  userProfile: UserProfile | null;
+  isLoading: boolean;
+  isGuest: boolean;
+  isAdmin: boolean;
+  register: (email: string, password: string, phone: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUserEmail: (newEmail: string, currentPassword: string) => Promise<void>;
+  updateUserPassword: (newPassword: string, currentPassword: string) => Promise<void>;
+  deleteAccount: (currentPassword: string) => Promise<void>;
+  continueAsGuest: () => void;
+  getAllUsers: () => Promise<{ email: string; phone: string; createdAt: string }[]>;
+  getUserCount: () => Promise<number>;
 }
+
+const ADMIN_EMAIL = 'kevinspot@gmail.com';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [maintenanceMode, setMaintenanceMode] = useState<MaintenanceMode>({ enabled: false, message: '' });
 
   useEffect(() => {
-    console.log('🔵 [AUTH_PROVIDER] Setting up auth listener');
-    let isMounted = true;
-    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('🔵 [AUTH_PROVIDER] Auth state changed:', firebaseUser?.email || 'null');
-      
-      if (!isMounted) {
-        console.log('⚠️ [AUTH_PROVIDER] Component unmounted, skipping state update');
-        return;
-      }
-      
+      console.log('Auth state changed:', firebaseUser?.email);
       setUser(firebaseUser);
       
       if (firebaseUser) {
-        console.log('🔵 [AUTH_PROVIDER] Loading user profile...');
         try {
-          const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (profileDoc.exists() && isMounted) {
-            const data = profileDoc.data();
-            console.log('✅ [AUTH_PROVIDER] Profile loaded:', data.email);
-            setUserProfile({
-              email: data.email,
-              phone: data.phone,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              isAdmin: data.isAdmin || false,
-            });
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            const profile = userDoc.data() as UserProfile;
+            setUserProfile(profile);
+            console.log('User profile loaded:', profile.email, 'isAdmin:', profile.isAdmin);
           }
         } catch (error) {
-          console.error('❌ [AUTH_PROVIDER] Error loading profile:', error);
+          console.error('Error loading user profile:', error);
         }
-        if (isMounted) {
-          setIsGuest(false);
-        }
+        setIsGuest(false);
       } else {
-        console.log('🔵 [AUTH_PROVIDER] No user, checking guest mode...');
-        if (isMounted) {
-          setUserProfile(null);
-          const guestMode = await AsyncStorage.getItem('guest_mode');
-          console.log('🔵 [AUTH_PROVIDER] Guest mode:', guestMode);
-          setIsGuest(guestMode === 'true');
-        }
+        setUserProfile(null);
       }
       
-      if (isMounted) {
-        console.log('✅ [AUTH_PROVIDER] Setting loading to false');
-        setLoading(false);
-      }
+      setIsLoading(false);
     });
 
-    loadMaintenanceMode();
-
-    return () => {
-      console.log('🔵 [AUTH_PROVIDER] Cleaning up auth listener');
-      isMounted = false;
-      unsubscribe();
-    };
+    return unsubscribe;
   }, []);
 
-  const loadMaintenanceMode = async () => {
-    try {
-      console.log('🔧 [MAINTENANCE] Loading maintenance mode...');
-      const maintenanceDoc = await getDoc(doc(db, 'settings', 'maintenance'));
-      if (maintenanceDoc.exists()) {
-        const data = maintenanceDoc.data();
-        console.log('✅ [MAINTENANCE] Loaded:', data);
-        setMaintenanceMode({
-          enabled: data.enabled || false,
-          message: data.message || 'Service temporarily unavailable',
-        });
-      } else {
-        console.log('ℹ️ [MAINTENANCE] No maintenance document found, using defaults');
-        setMaintenanceMode({ enabled: false, message: '' });
-      }
-    } catch (error: any) {
-      if (error?.code === 'unavailable') {
-        console.log('ℹ️ [MAINTENANCE] Client is offline, using default maintenance mode');
-        setMaintenanceMode({ enabled: false, message: '' });
-      } else {
-        console.error('❌ [MAINTENANCE] Error loading maintenance mode:', error);
-        console.error('❌ [MAINTENANCE] Error code:', error?.code);
-        console.error('❌ [MAINTENANCE] Error message:', error?.message);
-        setMaintenanceMode({ enabled: false, message: '' });
-      }
-    }
-  };
-
   const register = useCallback(async (email: string, password: string, phone: string) => {
-    console.log('🔵 [REGISTER] Starting registration process...');
-    console.log('🔵 [REGISTER] Email:', email);
-    console.log('🔵 [REGISTER] Phone:', phone);
-    console.log('🔵 [REGISTER] Password length:', password.length);
-    
     try {
-      console.log('🔵 [REGISTER] Calling createUserWithEmailAndPassword...');
+      console.log('Registering user:', email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('✅ [REGISTER] User created in Firebase Auth:', userCredential.user.uid);
       
-      const isAdmin = email === 'kevinspot@gmail.com';
-      console.log('🔵 [REGISTER] Is admin:', isAdmin);
+      const isAdmin = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
       
-      console.log('🔵 [REGISTER] Creating Firestore document...');
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
+      const userProfile: UserProfile = {
         email,
         phone,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         isAdmin,
-      });
-      console.log('✅ [REGISTER] Firestore document created successfully');
-      
-      console.log('🔵 [REGISTER] Removing guest mode...');
-      await AsyncStorage.removeItem('guest_mode');
-      console.log('✅ [REGISTER] Guest mode removed');
+      };
 
-      console.log('✅ [REGISTER] User registered successfully');
-      return userCredential.user;
+      await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
+      console.log('User profile created:', email, 'isAdmin:', isAdmin);
+      
+      setUserProfile(userProfile);
     } catch (error: any) {
-      console.error('❌ [REGISTER] Registration error:', error);
-      console.error('❌ [REGISTER] Error code:', error.code);
-      console.error('❌ [REGISTER] Error message:', error.message);
+      console.error('Registration error:', error);
       throw new Error(error.message || 'Failed to register');
     }
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     try {
+      console.log('Logging in user:', email);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      await AsyncStorage.removeItem('guest_mode');
-      console.log('User signed in successfully');
-      return userCredential.user;
+      
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      if (userDoc.exists()) {
+        const profile = userDoc.data() as UserProfile;
+        setUserProfile(profile);
+        console.log('User logged in:', profile.email, 'isAdmin:', profile.isAdmin);
+      }
+      
+      setIsGuest(false);
     } catch (error: any) {
-      console.error('Sign in error:', error);
-      throw new Error(error.message || 'Failed to sign in');
+      console.error('Login error:', error);
+      throw new Error(error.message || 'Failed to login');
     }
   }, []);
 
-  const signOut = useCallback(async () => {
+  const logout = useCallback(async () => {
     try {
-      await firebaseSignOut(auth);
-      await AsyncStorage.removeItem('guest_mode');
-      console.log('User signed out successfully');
+      await signOut(auth);
+      setUserProfile(null);
+      setIsGuest(false);
+      console.log('User logged out');
     } catch (error: any) {
-      console.error('Sign out error:', error);
-      throw new Error(error.message || 'Failed to sign out');
+      console.error('Logout error:', error);
+      throw new Error(error.message || 'Failed to logout');
     }
-  }, []);
-
-  const continueAsGuest = useCallback(async () => {
-    await AsyncStorage.setItem('guest_mode', 'true');
-    setIsGuest(true);
-    console.log('Continuing as guest');
   }, []);
 
   const updateUserEmail = useCallback(async (newEmail: string, currentPassword: string) => {
@@ -194,91 +135,103 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     try {
       const credential = EmailAuthProvider.credential(user.email!, currentPassword);
       await reauthenticateWithCredential(user, credential);
-      await firebaseUpdateEmail(user, newEmail);
-      await setDoc(doc(db, 'users', user.uid), { email: newEmail }, { merge: true });
-      console.log('Email updated successfully');
+      
+      await updateEmail(user, newEmail);
+      
+      await setDoc(doc(db, 'users', user.uid), {
+        email: newEmail,
+      }, { merge: true });
+      
+      if (userProfile) {
+        setUserProfile({ ...userProfile, email: newEmail });
+      }
     } catch (error: any) {
       console.error('Update email error:', error);
       throw new Error(error.message || 'Failed to update email');
     }
-  }, [user]);
+  }, [user, userProfile]);
 
-  const updateUserPassword = useCallback(async (currentPassword: string, newPassword: string) => {
+  const updateUserPassword = useCallback(async (newPassword: string, currentPassword: string) => {
     if (!user) throw new Error('No user logged in');
     
     try {
       const credential = EmailAuthProvider.credential(user.email!, currentPassword);
       await reauthenticateWithCredential(user, credential);
-      await firebaseUpdatePassword(user, newPassword);
-      console.log('Password updated successfully');
+      
+      await updatePassword(user, newPassword);
     } catch (error: any) {
       console.error('Update password error:', error);
       throw new Error(error.message || 'Failed to update password');
     }
   }, [user]);
 
-  const deleteAccount = useCallback(async (password: string) => {
+  const deleteAccount = useCallback(async (currentPassword: string) => {
     if (!user) throw new Error('No user logged in');
     
     try {
-      const credential = EmailAuthProvider.credential(user.email!, password);
+      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
       await reauthenticateWithCredential(user, credential);
-      await deleteDoc(doc(db, 'users', user.uid));
-      await firebaseDeleteUser(user);
-      console.log('Account deleted successfully');
+      
+      await deleteUser(user);
+      setUserProfile(null);
+      setIsGuest(false);
     } catch (error: any) {
       console.error('Delete account error:', error);
       throw new Error(error.message || 'Failed to delete account');
     }
   }, [user]);
 
-  const getAllUsers = useCallback(async () => {
-    if (!userProfile?.isAdmin) throw new Error('Unauthorized');
-    
+  const continueAsGuest = useCallback(() => {
+    setIsGuest(true);
+    setIsLoading(false);
+  }, []);
+
+  const getAllUsers = useCallback(async (): Promise<{ email: string; phone: string; createdAt: string }[]> => {
     try {
       const usersSnapshot = await getDocs(collection(db, 'users'));
-      return usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      }));
-    } catch (error: any) {
-      console.error('Get users error:', error);
-      throw new Error(error.message || 'Failed to get users');
-    }
-  }, [userProfile]);
-
-  const setMaintenanceModeAdmin = useCallback(async (enabled: boolean, message: string) => {
-    if (!userProfile?.isAdmin) throw new Error('Unauthorized');
-    
-    try {
-      await setDoc(doc(db, 'settings', 'maintenance'), {
-        enabled,
-        message,
-        updatedAt: new Date(),
+      const users = usersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          email: data.email || '',
+          phone: data.phone || '',
+          createdAt: data.createdAt || '',
+        };
       });
-      setMaintenanceMode({ enabled, message });
-      console.log('Maintenance mode updated');
-    } catch (error: any) {
-      console.error('Set maintenance mode error:', error);
-      throw new Error(error.message || 'Failed to update maintenance mode');
+      return users;
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      throw error;
     }
+  }, []);
+
+  const getUserCount = useCallback(async (): Promise<number> => {
+    try {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      return usersSnapshot.size;
+    } catch (error) {
+      console.error('Error getting user count:', error);
+      throw error;
+    }
+  }, []);
+
+  const isAdmin = useMemo(() => {
+    return userProfile?.isAdmin === true;
   }, [userProfile]);
 
   return useMemo(() => ({
     user,
     userProfile,
+    isLoading,
     isGuest,
-    loading,
-    maintenanceMode,
+    isAdmin,
     register,
-    signIn,
-    signOut,
-    continueAsGuest,
+    login,
+    logout,
     updateUserEmail,
     updateUserPassword,
     deleteAccount,
+    continueAsGuest,
     getAllUsers,
-    setMaintenanceModeAdmin,
-  }), [user, userProfile, isGuest, loading, maintenanceMode, register, signIn, signOut, continueAsGuest, updateUserEmail, updateUserPassword, deleteAccount, getAllUsers, setMaintenanceModeAdmin]);
+    getUserCount,
+  }), [user, userProfile, isLoading, isGuest, isAdmin, register, login, logout, updateUserEmail, updateUserPassword, deleteAccount, continueAsGuest, getAllUsers, getUserCount]);
 });

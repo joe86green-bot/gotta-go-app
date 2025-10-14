@@ -1,27 +1,20 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBf9sIRT4XpPUyopJqYZ1oyHKVEuIPrpHk",
-  authDomain: "gotta-go-36fa1.firebaseapp.com",
-  projectId: "gotta-go-36fa1",
-  storageBucket: "gotta-go-36fa1.firebasestorage.app",
-  messagingSenderId: "424394620127",
-  appId: "1:424394620127:web:8383d0839c1d770f487d6a",
-  measurementId: "G-RSVBLSN1TD"
+  apiKey: "AIzaSyCJlEJDm5b9sjbHLZ0XyFTyZHcRQ4tA8Hw",
+  authDomain: "gottago-831ca.firebaseapp.com",
+  projectId: "gottago-831ca",
+  storageBucket: "gottago-831ca.firebasestorage.app",
+  messagingSenderId: "721047577523",
+  appId: "1:721047577523:web:ede1a07db16a03ea3121c6"
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
 
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Persistence failed: Multiple tabs open');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Persistence not available in this browser');
-    }
-  });
-}
+const auth = getAuth(app);
+
+const db = getFirestore(app);
+
+export { auth, db };

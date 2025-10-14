@@ -5,68 +5,47 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { LogIn, Eye, EyeOff, Apple } from 'lucide-react-native';
+import { LogIn, Eye, EyeOff } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function LoginScreen() {
-  const { signIn, signInWithApple, isAppleSignInAvailable } = useAuth();
+  const { login, continueAsGuest } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [appleLoading, setAppleLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both email and password');
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     try {
-      await signIn(email, password);
+      await login(email.trim(), password);
       router.replace('/');
     } catch (error: any) {
-      console.error('Login error:', error);
-      let errorMessage = 'Failed to login';
-      
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        errorMessage = 'Invalid email or password';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed attempts. Please try again later.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Login Failed', errorMessage);
+      Alert.alert('Login Failed', error.message || 'Invalid credentials');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleAppleSignIn = async () => {
-    setAppleLoading(true);
-    try {
-      await signInWithApple();
-      router.replace('/');
-    } catch (error: any) {
-      console.error('Apple sign in error:', error);
-      if (error.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign In Failed', error.message || 'Failed to sign in with Apple');
-      }
-    } finally {
-      setAppleLoading(false);
-    }
+  const handleGuestMode = () => {
+    continueAsGuest();
+    router.replace('/');
   };
 
   return (
@@ -75,116 +54,100 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <LogIn size={36} color={COLORS.primary} />
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
-          </View>
-
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor="#999"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-              />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.header}>
+              <LogIn size={48} color={COLORS.primary} />
+              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.subtitle}>Sign in to continue</Text>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#999"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={() => {
-                    Keyboard.dismiss();
-                    handleLogin();
-                  }}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} color={COLORS.textSecondary} />
-                  ) : (
-                    <Eye size={20} color={COLORS.textSecondary} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={() => router.push('/forgot-password')}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.loginButton, loading && styles.disabledButton]}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
-
-            {isAppleSignInAvailable && (
-              <>
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>OR</Text>
-                  <View style={styles.dividerLine} />
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Email</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#999"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="next"
+                  />
                 </View>
+              </View>
 
-                <TouchableOpacity
-                  style={[styles.appleButton, appleLoading && styles.disabledButton]}
-                  onPress={handleAppleSignIn}
-                  disabled={appleLoading}
-                >
-                  {appleLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <>
-                      <Apple size={20} color="#fff" />
-                      <Text style={styles.appleButtonText}>Sign in with Apple</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Password</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#999"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color={COLORS.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={COLORS.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don&apos;t have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/register')}>
-                <Text style={styles.linkText}>Sign Up</Text>
+              <TouchableOpacity
+                style={[styles.loginButton, isLoading && styles.disabledButton]}
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Sign In</Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity
+                style={styles.guestButton}
+                onPress={handleGuestMode}
+              >
+                <Text style={styles.guestButtonText}>View as Guest</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.registerLink}
+                onPress={() => router.push('/register')}
+              >
+                <Text style={styles.registerLinkText}>
+                  Don&apos;t have an account? <Text style={styles.registerLinkBold}>Sign Up</Text>
+                </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -197,54 +160,46 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 24,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 40,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold' as const,
     color: COLORS.text,
-    marginTop: 12,
+    marginTop: 16,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 16,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: 8,
   },
   form: {
-    width: '100%',
+    flex: 1,
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600' as const,
     color: COLORS.text,
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    position: 'relative',
   },
   input: {
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
+    padding: 16,
+    fontSize: 16,
     color: COLORS.text,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -252,27 +207,18 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   passwordInput: {
-    flex: 1,
-    padding: 14,
-    fontSize: 15,
-    color: COLORS.text,
+    paddingRight: 50,
   },
-  eyeButton: {
-    padding: 14,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 8,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600' as const,
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    padding: 4,
   },
   loginButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
-    padding: 16,
+    padding: 18,
     alignItems: 'center',
     marginTop: 8,
     shadowColor: COLORS.primary,
@@ -285,58 +231,49 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   loginButtonText: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 'bold' as const,
     color: '#fff',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: COLORS.border,
   },
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
     color: COLORS.textSecondary,
-    fontWeight: '600' as const,
+    fontWeight: '500' as const,
   },
-  appleButton: {
-    backgroundColor: '#000',
+  guestButton: {
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
+    padding: 18,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  appleButtonText: {
-    fontSize: 17,
-    fontWeight: 'bold' as const,
-    color: '#fff',
+  guestButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: COLORS.text,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  registerLink: {
+    marginTop: 24,
     alignItems: 'center',
-    marginTop: 16,
   },
-  footerText: {
+  registerLinkText: {
     fontSize: 14,
     color: COLORS.textSecondary,
   },
-  linkText: {
-    fontSize: 14,
+  registerLinkBold: {
     color: COLORS.primary,
-    fontWeight: '600' as const,
+    fontWeight: 'bold' as const,
   },
 });
