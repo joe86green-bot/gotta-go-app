@@ -32,7 +32,7 @@ import { db } from '@/config/firebase';
 type TabType = 'call' | 'text';
 
 export default function HomeScreen() {
-  const { user, isGuest, isAdmin, isLoading: authLoading } = useAuth();
+  const { user, isGuest, isAdmin, isLoading: authLoading, hasSeenWelcome } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('call');
   const [selectedRecording, setSelectedRecording] = useState<number | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
@@ -136,10 +136,14 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !user && !isGuest) {
-      router.replace('/login');
+    if (!authLoading) {
+      if (!hasSeenWelcome) {
+        router.replace('/welcome');
+      } else if (!user && !isGuest) {
+        router.replace('/login');
+      }
     }
-  }, [user, isGuest, authLoading]);
+  }, [user, isGuest, authLoading, hasSeenWelcome]);
 
   const CALL_SENDER_NUMBER = '+1 (818) 643-6090';
   const TEXT_SENDER_NUMBER = '+1 (833) 962-4030';
@@ -209,7 +213,7 @@ export default function HomeScreen() {
     if (isGuest) {
       Alert.alert(
         'Login Required',
-        'Please login or create an account to use this feature',
+        'You must be logged in to do that',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Login', onPress: () => router.push('/login') },

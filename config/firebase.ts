@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { Platform } from 'react-native';
 
@@ -15,7 +15,7 @@ const firebaseConfig = {
 console.log('🔥 Initializing Firebase...');
 const app = initializeApp(firebaseConfig);
 
-const auth = getAuth(app);
+const auth: Auth = getAuth(app);
 
 const db = getFirestore(app);
 

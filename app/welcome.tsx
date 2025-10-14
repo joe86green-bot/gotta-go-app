@@ -10,25 +10,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Phone, MessageSquare, Clock, Shield, Zap, ArrowRight } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function WelcomeScreen() {
-  const handleGetStarted = async () => {
-    await AsyncStorage.setItem('hasSeenWelcome', 'true');
-    router.replace('/login');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <View style={styles.logo}>
-              <Phone size={48} color={COLORS.primary} strokeWidth={2.5} />
-            </View>
+            <Phone size={48} color={COLORS.primary} />
           </View>
           <Text style={styles.title}>Gotta Go</Text>
           <Text style={styles.tagline}>Your Emergency Escape Plan</Text>
@@ -39,83 +32,105 @@ export default function WelcomeScreen() {
             Need an excuse to leave?{'\n'}We&apos;ve got you covered.
           </Text>
           <Text style={styles.heroDescription}>
-            Schedule a fake call or text to help you gracefully exit any awkward situation.
+            Schedule fake calls or texts to help you escape awkward situations gracefully.
           </Text>
         </View>
 
         <View style={styles.featuresSection}>
+          <Text style={styles.sectionTitle}>How It Works</Text>
+          
           <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#E3F2FD' }]}>
-              <Phone size={28} color="#1976D2" />
+            <View style={styles.featureIconContainer}>
+              <Phone size={28} color={COLORS.primary} />
             </View>
-            <Text style={styles.featureTitle}>Realistic Calls</Text>
-            <Text style={styles.featureDescription}>
-              Choose from pre-recorded messages that sound authentic and convincing.
-            </Text>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>Realistic Calls</Text>
+              <Text style={styles.featureDescription}>
+                Choose from pre-recorded emergency calls that sound authentic
+              </Text>
+            </View>
           </View>
 
           <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#F3E5F5' }]}>
-              <MessageSquare size={28} color="#7B1FA2" />
+            <View style={styles.featureIconContainer}>
+              <MessageSquare size={28} color={COLORS.primary} />
             </View>
-            <Text style={styles.featureTitle}>Custom Texts</Text>
-            <Text style={styles.featureDescription}>
-              Send yourself a text with any excuse you need at the perfect moment.
-            </Text>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>Convincing Texts</Text>
+              <Text style={styles.featureDescription}>
+                Get text messages with believable excuses at the perfect time
+              </Text>
+            </View>
           </View>
 
           <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#FFF3E0' }]}>
-              <Clock size={28} color="#F57C00" />
+            <View style={styles.featureIconContainer}>
+              <Clock size={28} color={COLORS.primary} />
             </View>
-            <Text style={styles.featureTitle}>Perfect Timing</Text>
-            <Text style={styles.featureDescription}>
-              Schedule your escape for exactly when you need it with quick presets.
-            </Text>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>Perfect Timing</Text>
+              <Text style={styles.featureDescription}>
+                Schedule your escape for exactly when you need it
+              </Text>
+            </View>
           </View>
 
           <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#E8F5E9' }]}>
-              <Shield size={28} color="#388E3C" />
+            <View style={styles.featureIconContainer}>
+              <Shield size={28} color={COLORS.primary} />
             </View>
-            <Text style={styles.featureTitle}>Stealth Mode</Text>
-            <Text style={styles.featureDescription}>
-              Hide the app from recent apps after scheduling for extra discretion.
-            </Text>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>Discreet & Private</Text>
+              <Text style={styles.featureDescription}>
+                Your secret escape plan stays between you and us
+              </Text>
+            </View>
           </View>
 
           <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#FCE4EC' }]}>
-              <Zap size={28} color="#C2185B" />
+            <View style={styles.featureIconContainer}>
+              <Zap size={28} color={COLORS.primary} />
             </View>
-            <Text style={styles.featureTitle}>Quick Escape</Text>
-            <Text style={styles.featureDescription}>
-              One-tap presets for 5, 15, or 30 minutes when you need to leave fast.
-            </Text>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>Quick Escape</Text>
+              <Text style={styles.featureDescription}>
+                Set up an emergency exit in just 5, 15, or 30 minutes
+              </Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.storySection}>
-          <Text style={styles.storyTitle}>Our Story</Text>
-          <Text style={styles.storyText}>
-            Originally created as a fun gift for a friend back in 2021, Gotta Go unexpectedly became a handy escape plan for many! 
-          </Text>
-          <Text style={styles.storyText}>
-            After a little break, we&apos;re excited to bring it back, fully recharged and ready to help you make a smooth exit from any awkward situation.
-          </Text>
+        <View style={styles.useCasesSection}>
+          <Text style={styles.sectionTitle}>Perfect For</Text>
+          <View style={styles.useCasesList}>
+            <Text style={styles.useCaseItem}>• Bad dates</Text>
+            <Text style={styles.useCaseItem}>• Awkward meetings</Text>
+            <Text style={styles.useCaseItem}>• Boring parties</Text>
+            <Text style={styles.useCaseItem}>• Uncomfortable situations</Text>
+            <Text style={styles.useCaseItem}>• When you just need an out</Text>
+          </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.getStartedButton}
-          onPress={handleGetStarted}
-        >
-          <Text style={styles.getStartedButtonText}>Get Started</Text>
-          <ArrowRight size={20} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.ctaSection}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.replace('/register')}
+          >
+            <Text style={styles.primaryButtonText}>Get Started</Text>
+            <ArrowRight size={20} color="#fff" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => router.replace('/login')}
+          >
+            <Text style={styles.secondaryButtonText}>I Already Have an Account</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Your privacy matters. All data is stored securely.
+            Originally created in 2021, now back and better than ever!
           </Text>
         </View>
       </ScrollView>
@@ -128,33 +143,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
     paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    paddingTop: 40,
+    paddingHorizontal: 24,
   },
   logoContainer: {
-    marginBottom: 20,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 40,
+    fontSize: 36,
     fontWeight: 'bold' as const,
     color: COLORS.primary,
     marginBottom: 8,
@@ -165,7 +175,9 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
   },
   heroSection: {
-    marginBottom: 40,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 32,
     alignItems: 'center',
   },
   heroTitle: {
@@ -173,8 +185,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as const,
     color: COLORS.text,
     textAlign: 'center',
-    marginBottom: 16,
     lineHeight: 36,
+    marginBottom: 16,
   },
   heroDescription: {
     fontSize: 16,
@@ -183,57 +195,75 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   featuresSection: {
-    marginBottom: 40,
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold' as const,
+    color: COLORS.text,
+    marginBottom: 20,
   },
   featureCard: {
+    flexDirection: 'row',
     backgroundColor: COLORS.cardBackground,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  featureIcon: {
+  featureIconContainer: {
     width: 56,
     height: 56,
     borderRadius: 28,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginRight: 16,
+  },
+  featureContent: {
+    flex: 1,
+    justifyContent: 'center',
   },
   featureTitle: {
-    fontSize: 18,
-    fontWeight: 'bold' as const,
+    fontSize: 16,
+    fontWeight: '600' as const,
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   featureDescription: {
     fontSize: 14,
     color: COLORS.textSecondary,
     lineHeight: 20,
   },
-  storySection: {
-    backgroundColor: COLORS.primaryLight,
+  useCasesSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+  },
+  useCasesList: {
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 16,
-    padding: 24,
-    marginBottom: 32,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  storyTitle: {
-    fontSize: 22,
-    fontWeight: 'bold' as const,
-    color: COLORS.primary,
-    marginBottom: 16,
-  },
-  storyText: {
-    fontSize: 15,
+  useCaseItem: {
+    fontSize: 16,
     color: COLORS.text,
-    lineHeight: 22,
-    marginBottom: 12,
+    lineHeight: 28,
   },
-  getStartedButton: {
+  ctaSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  primaryButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
     padding: 18,
@@ -241,24 +271,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 12,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
-  getStartedButtonText: {
+  primaryButtonText: {
     fontSize: 18,
     fontWeight: 'bold' as const,
     color: '#fff',
   },
+  secondaryButton: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 12,
+    padding: 18,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: COLORS.text,
+  },
   footer: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
+    lineHeight: 20,
   },
 });
