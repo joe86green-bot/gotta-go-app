@@ -136,17 +136,9 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    const checkWelcomeScreen = async () => {
-      if (!authLoading && !user && !isGuest) {
-        const hasSeenWelcome = await AsyncStorage.getItem('hasSeenWelcome');
-        if (hasSeenWelcome === 'true') {
-          router.replace('/login');
-        } else {
-          router.replace('/welcome');
-        }
-      }
-    };
-    checkWelcomeScreen();
+    if (!authLoading && !user && !isGuest) {
+      router.replace('/login');
+    }
   }, [user, isGuest, authLoading]);
 
   const CALL_SENDER_NUMBER = '+1 (818) 643-6090';
@@ -217,7 +209,7 @@ export default function HomeScreen() {
     if (isGuest) {
       Alert.alert(
         'Login Required',
-        'You must be logged in to do that',
+        'Please login or create an account to use this feature',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Login', onPress: () => router.push('/login') },

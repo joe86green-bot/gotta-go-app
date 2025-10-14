@@ -10,10 +10,7 @@ import {
   updatePassword,
   deleteUser,
   EmailAuthProvider,
-  reauthenticateWithCredential,
-  setPersistence,
-  browserLocalPersistence,
-  indexedDBLocalPersistence
+  reauthenticateWithCredential
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
@@ -52,24 +49,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
-    const initializeAuth = async () => {
+    const loadGuestStatus = async () => {
       try {
-        console.log('🔐 Initializing auth persistence...');
-        
-        await setPersistence(auth, indexedDBLocalPersistence).catch(() => {
-          return setPersistence(auth, browserLocalPersistence);
-        });
-        
         const guestStatus = await AsyncStorage.getItem('isGuest');
-        console.log('👤 Guest status from storage:', guestStatus);
         if (guestStatus === 'true') {
           setIsGuest(true);
         }
       } catch (error) {
-        console.error('❌ Error initializing auth:', error);
+        console.error('Error loading guest status:', error);
       }
     };
-    initializeAuth();
+    loadGuestStatus();
   }, []);
 
   useEffect(() => {
@@ -96,14 +86,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         }
         setIsGuest(false);
         await AsyncStorage.setItem('isGuest', 'false');
-        await AsyncStorage.setItem('hasSeenWelcome', 'true');
       } else {
         console.log('👤 No user logged in');
         setUserProfile(null);
-        const guestStatus = await AsyncStorage.getItem('isGuest');
-        if (guestStatus !== 'true') {
-          setIsGuest(false);
-        }
       }
       
       console.log('✅ Auth state processing complete, setting isLoading to false');
