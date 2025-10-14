@@ -10,7 +10,8 @@ import {
   updatePassword,
   deleteUser,
   EmailAuthProvider,
-  reauthenticateWithCredential
+  reauthenticateWithCredential,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
@@ -36,6 +37,7 @@ interface AuthContextValue {
   updateUserPassword: (newPassword: string, currentPassword: string) => Promise<void>;
   deleteAccount: (currentPassword: string) => Promise<void>;
   continueAsGuest: () => void;
+  resetPassword: (email: string) => Promise<void>;
   getAllUsers: () => Promise<{ email: string; phone: string; createdAt: string }[]>;
   getUserCount: () => Promise<number>;
 }
@@ -52,8 +54,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     const loadGuestStatus = async () => {
       try {
         const guestStatus = await AsyncStorage.getItem('isGuest');
+        const hasSeenWelcome = await AsyncStorage.getItem('hasSeenWelcome');
         if (guestStatus === 'true') {
           setIsGuest(true);
+        }
+        if (!hasSeenWelcome) {
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('Error loading guest status:', error);
@@ -123,6 +129,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       console.error('❌ Registration error:', error);
       console.error('Error code:', error?.code);
       console.error('Error message:', error?.message);
+      
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('This email is already registered');
+      } else if (error.code === 'auth/invalid-email') {
+        throw new Error('Invalid email address');
+      } else if (error.code === 'auth/weak-password') {
+        throw new Error('Password is too weak. Use at least 6 characters');
+      } else if (error.code === 'auth/network-request-failed') {
+        throw new Error('Network error. Please check your connection');
+      }
+      
       throw new Error(error.message || 'Failed to register');
     }
   }, []);
@@ -149,6 +166,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       console.error('❌ Login error:', error);
       console.error('Error code:', error?.code);
       console.error('Error message:', error?.message);
+      
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+        throw new Error('Invalid email or password');
+      } else if (error.code === 'auth/user-not-found') {
+        throw new Error('No account found with this email');
+      } else if (error.code === 'auth/too-many-requests') {
+        throw new Error('Too many failed attempts. Please try again later');
+      } else if (error.code === 'auth/network-request-failed') {
+        throw new Error('Network error. Please check your connection');
+      }
+      
       throw new Error(error.message || 'Failed to login');
     }
   }, []);
@@ -224,6 +252,25 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     await AsyncStorage.setItem('isGuest', 'true');
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      console.log('✅ Password reset email sent to:', email);
+    } catch (error: any) {
+      console.error('❌ Password reset error:', error);
+      
+      if (error.code === 'auth/user-not-found') {
+        throw new Error('No account found with this email');
+      } else if (error.code === 'auth/invalid-email') {
+        throw new Error('Invalid email address');
+      } else if (error.code === 'auth/network-request-failed') {
+        throw new Error('Network error. Please check your connection');
+      }
+      
+      throw new Error(error.message || 'Failed to send reset email');
+    }
+  }, []);
+
   const getAllUsers = useCallback(async (): Promise<{ email: string; phone: string; createdAt: string }[]> => {
     try {
       const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -269,7 +316,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     updateUserPassword,
     deleteAccount,
     continueAsGuest,
+    resetPassword,
     getAllUsers,
     getUserCount,
-  }), [user, userProfile, isLoading, isGuest, isAdmin, register, login, logout, updateUserEmail, updateUserPassword, deleteAccount, continueAsGuest, getAllUsers, getUserCount]);
+  }), [user, userProfile, isLoading, isGuest, isAdmin, register, login, logout, updateUserEmail, updateUserPassword, deleteAccount, continueAsGuest, resetPassword, getAllUsers, getUserCount]);
 });

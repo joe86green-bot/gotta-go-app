@@ -16,15 +16,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LogIn, Eye, EyeOff } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function LoginScreen() {
-  const { login, continueAsGuest } = useAuth();
+  const { login, continueAsGuest, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const handleLogin = async () => {
     console.log('🚀 Login button pressed');
@@ -40,6 +42,7 @@ export default function LoginScreen() {
     try {
       console.log('🔑 Calling login function...');
       await login(email.trim(), password);
+      await AsyncStorage.setItem('hasSeenWelcome', 'true');
       console.log('✅ Login function completed successfully');
       setIsLoading(false);
       console.log('🏠 Navigating to home...');
@@ -52,9 +55,31 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGuestMode = () => {
+  const handleGuestMode = async () => {
+    await AsyncStorage.setItem('hasSeenWelcome', 'true');
     continueAsGuest();
     router.replace('/');
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      await resetPassword(email.trim());
+      Alert.alert(
+        'Email Sent',
+        'Password reset instructions have been sent to your email',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to send reset email');
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   return (
@@ -120,6 +145,16 @@ export default function LoginScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <TouchableOpacity
+                style={styles.forgotPasswordLink}
+                onPress={handleForgotPassword}
+                disabled={isResettingPassword}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  {isResettingPassword ? 'Sending...' : 'Forgot Password?'}
+                </Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.loginButton, isLoading && styles.disabledButton]}
@@ -284,5 +319,15 @@ const styles = StyleSheet.create({
   registerLinkBold: {
     color: COLORS.primary,
     fontWeight: 'bold' as const,
+  },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '600' as const,
   },
 });

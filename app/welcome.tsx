@@ -15,33 +15,30 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
-        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
+          <View style={styles.iconContainer}>
             <Phone size={48} color={COLORS.primary} />
           </View>
           <Text style={styles.title}>Gotta Go</Text>
           <Text style={styles.tagline}>Your Emergency Escape Plan</Text>
         </View>
 
-        <View style={styles.heroSection}>
-          <Text style={styles.heroTitle}>
-            Need an excuse to leave?{'\n'}We&apos;ve got you covered.
-          </Text>
-          <Text style={styles.heroDescription}>
-            Schedule fake calls or texts to help you escape awkward situations gracefully.
+        <View style={styles.descriptionCard}>
+          <Text style={styles.description}>
+            Need a quick exit from an awkward situation? We&apos;ve got you covered! 
+            Schedule a fake call or text to arrive at the perfect moment.
           </Text>
         </View>
 
         <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>How It Works</Text>
+          <Text style={styles.featuresTitle}>How It Works</Text>
           
-          <View style={styles.featureCard}>
+          <View style={styles.featureItem}>
             <View style={styles.featureIconContainer}>
-              <Phone size={28} color={COLORS.primary} />
+              <Phone size={24} color={COLORS.primary} />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>Realistic Calls</Text>
@@ -51,70 +48,69 @@ export default function WelcomeScreen() {
             </View>
           </View>
 
-          <View style={styles.featureCard}>
+          <View style={styles.featureItem}>
             <View style={styles.featureIconContainer}>
-              <MessageSquare size={28} color={COLORS.primary} />
+              <MessageSquare size={24} color={COLORS.primary} />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Convincing Texts</Text>
+              <Text style={styles.featureTitle}>Custom Text Messages</Text>
               <Text style={styles.featureDescription}>
-                Get text messages with believable excuses at the perfect time
+                Send yourself a text with any excuse you need
               </Text>
             </View>
           </View>
 
-          <View style={styles.featureCard}>
+          <View style={styles.featureItem}>
             <View style={styles.featureIconContainer}>
-              <Clock size={28} color={COLORS.primary} />
+              <Clock size={24} color={COLORS.primary} />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>Perfect Timing</Text>
               <Text style={styles.featureDescription}>
-                Schedule your escape for exactly when you need it
+                Schedule exactly when you need your escape to arrive
               </Text>
             </View>
           </View>
 
-          <View style={styles.featureCard}>
+          <View style={styles.featureItem}>
             <View style={styles.featureIconContainer}>
-              <Shield size={28} color={COLORS.primary} />
+              <Shield size={24} color={COLORS.primary} />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Discreet & Private</Text>
+              <Text style={styles.featureTitle}>Stealth Mode</Text>
               <Text style={styles.featureDescription}>
-                Your secret escape plan stays between you and us
+                Hide the app from recent apps for extra discretion
               </Text>
             </View>
           </View>
 
-          <View style={styles.featureCard}>
+          <View style={styles.featureItem}>
             <View style={styles.featureIconContainer}>
-              <Zap size={28} color={COLORS.primary} />
+              <Zap size={24} color={COLORS.primary} />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>Quick Escape</Text>
               <Text style={styles.featureDescription}>
-                Set up an emergency exit in just 5, 15, or 30 minutes
+                One-tap shortcuts for 5, 15, or 30 minute escapes
               </Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.useCasesSection}>
-          <Text style={styles.sectionTitle}>Perfect For</Text>
-          <View style={styles.useCasesList}>
-            <Text style={styles.useCaseItem}>• Bad dates</Text>
-            <Text style={styles.useCaseItem}>• Awkward meetings</Text>
-            <Text style={styles.useCaseItem}>• Boring parties</Text>
-            <Text style={styles.useCaseItem}>• Uncomfortable situations</Text>
-            <Text style={styles.useCaseItem}>• When you just need an out</Text>
-          </View>
+        <View style={styles.storySection}>
+          <Text style={styles.storyTitle}>Our Story</Text>
+          <Text style={styles.storyText}>
+            Originally created as a fun gift for a friend back in 2021, this app 
+            unexpectedly became a handy escape plan for many! While it took a little 
+            break, we&apos;re excited to bring it back, fully recharged and ready to help 
+            you make a smooth exit from any awkward situation.
+          </Text>
         </View>
 
-        <View style={styles.ctaSection}>
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => router.replace('/register')}
+            onPress={() => router.replace('/login')}
           >
             <Text style={styles.primaryButtonText}>Get Started</Text>
             <ArrowRight size={20} color="#fff" />
@@ -122,16 +118,12 @@ export default function WelcomeScreen() {
 
           <TouchableOpacity
             style={styles.secondaryButton}
-            onPress={() => router.replace('/login')}
+            onPress={() => {
+              router.replace('/login');
+            }}
           >
-            <Text style={styles.secondaryButtonText}>I Already Have an Account</Text>
+            <Text style={styles.secondaryButtonText}>Already have an account? Sign In</Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Originally created in 2021, now back and better than ever!
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -143,83 +135,83 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 40,
     paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    paddingTop: 40,
-    paddingHorizontal: 24,
+    marginBottom: 32,
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  iconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   title: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: 'bold' as const,
     color: COLORS.primary,
     marginBottom: 8,
   },
   tagline: {
-    fontSize: 16,
+    fontSize: 18,
     color: COLORS.textSecondary,
     fontWeight: '500' as const,
   },
-  heroSection: {
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 32,
-    alignItems: 'center',
-  },
-  heroTitle: {
-    fontSize: 28,
-    fontWeight: 'bold' as const,
-    color: COLORS.text,
-    textAlign: 'center',
-    lineHeight: 36,
-    marginBottom: 16,
-  },
-  heroDescription: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  featuresSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold' as const,
-    color: COLORS.text,
-    marginBottom: 20,
-  },
-  featureCard: {
-    flexDirection: 'row',
+  descriptionCard: {
     backgroundColor: COLORS.cardBackground,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    padding: 20,
+    marginBottom: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
+  description: {
+    fontSize: 16,
+    color: COLORS.text,
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  featuresSection: {
+    marginBottom: 32,
+  },
+  featuresTitle: {
+    fontSize: 24,
+    fontWeight: 'bold' as const,
+    color: COLORS.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  featureItem: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   featureIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -240,28 +232,30 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 20,
   },
-  useCasesSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  useCasesList: {
+  storySection: {
     backgroundColor: COLORS.cardBackground,
     borderRadius: 16,
     padding: 20,
+    marginBottom: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  useCaseItem: {
-    fontSize: 16,
+  storyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold' as const,
     color: COLORS.text,
-    lineHeight: 28,
+    marginBottom: 12,
   },
-  ctaSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+  storyText: {
+    fontSize: 15,
+    color: COLORS.text,
+    lineHeight: 22,
+  },
+  buttonContainer: {
+    gap: 16,
   },
   primaryButton: {
     backgroundColor: COLORS.primary,
@@ -271,7 +265,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 12,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -284,27 +277,12 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   secondaryButton: {
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
-    padding: 18,
+    padding: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: 15,
+    color: COLORS.primary,
     fontWeight: '600' as const,
-    color: COLORS.text,
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });

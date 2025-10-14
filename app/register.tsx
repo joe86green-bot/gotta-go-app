@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { UserPlus, Eye, EyeOff } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -55,6 +56,7 @@ export default function RegisterScreen() {
     try {
       console.log('📝 Calling register function...');
       await register(email.trim(), password, phone.trim());
+      await AsyncStorage.setItem('hasSeenWelcome', 'true');
       console.log('✅ Register function completed successfully');
       setIsLoading(false);
       console.log('🎉 Showing success alert and navigating to home...');

@@ -13,6 +13,7 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
+      <Stack.Screen name="welcome" options={{ headerShown: false }} />
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen 
         name="schedule-success" 
@@ -51,6 +52,20 @@ function RootLayoutNav() {
         name="admin" 
         options={{ 
           title: "Admin Panel",
+          headerShown: true 
+        }} 
+      />
+      <Stack.Screen 
+        name="admin-users" 
+        options={{ 
+          title: "Registered Users",
+          headerShown: true 
+        }} 
+      />
+      <Stack.Screen 
+        name="admin-maintenance" 
+        options={{ 
+          title: "Maintenance Mode",
           headerShown: true 
         }} 
       />
