@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface UserProfile {
   email: string;
@@ -48,6 +49,20 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
+    const loadGuestStatus = async () => {
+      try {
+        const guestStatus = await AsyncStorage.getItem('isGuest');
+        if (guestStatus === 'true') {
+          setIsGuest(true);
+        }
+      } catch (error) {
+        console.error('Error loading guest status:', error);
+      }
+    };
+    loadGuestStatus();
+  }, []);
+
+  useEffect(() => {
     console.log('🔐 Setting up auth state listener...');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log('🔐 Auth state changed:', firebaseUser?.email || 'No user');
@@ -70,6 +85,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           console.error('Error message:', error?.message);
         }
         setIsGuest(false);
+        await AsyncStorage.setItem('isGuest', 'false');
       } else {
         console.log('👤 No user logged in');
         setUserProfile(null);
@@ -142,6 +158,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       await signOut(auth);
       setUserProfile(null);
       setIsGuest(false);
+      await AsyncStorage.setItem('isGuest', 'false');
       console.log('User logged out');
     } catch (error: any) {
       console.error('Logout error:', error);
@@ -201,9 +218,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     }
   }, [user]);
 
-  const continueAsGuest = useCallback(() => {
+  const continueAsGuest = useCallback(async () => {
     setIsGuest(true);
     setIsLoading(false);
+    await AsyncStorage.setItem('isGuest', 'true');
   }, []);
 
   const getAllUsers = useCallback(async (): Promise<{ email: string; phone: string; createdAt: string }[]> => {

@@ -26,7 +26,7 @@ import { RECORDINGS } from '@/constants/recordings';
 import { scheduleCall, scheduleText } from '@/services/clicksend';
 import { useScheduledItems } from '@/providers/ScheduledItemsProvider';
 import { useAuth } from '@/providers/AuthProvider';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 type TabType = 'call' | 'text';
@@ -110,20 +110,29 @@ export default function HomeScreen() {
   }, [activeTab, randomExcuses]);
 
   useEffect(() => {
-    const loadMaintenanceMode = async () => {
-      try {
-        const maintenanceDoc = await getDoc(doc(db, 'settings', 'maintenance'));
-        if (maintenanceDoc.exists()) {
-          setMaintenanceMode(maintenanceDoc.data() as { enabled: boolean; message: string });
+    console.log('🔧 Setting up maintenance mode listener...');
+    const unsubscribe = onSnapshot(
+      doc(db, 'settings', 'maintenance'),
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data() as { enabled: boolean; message: string };
+          console.log('🔧 Maintenance mode updated:', data);
+          setMaintenanceMode(data);
         } else {
+          console.log('🔧 Maintenance mode document does not exist, setting defaults');
           setMaintenanceMode({ enabled: false, message: '' });
         }
-      } catch (error) {
-        console.error('Error loading maintenance mode:', error);
+      },
+      (error) => {
+        console.error('Error listening to maintenance mode:', error);
         setMaintenanceMode({ enabled: false, message: '' });
       }
+    );
+
+    return () => {
+      console.log('🔧 Cleaning up maintenance mode listener');
+      unsubscribe();
     };
-    loadMaintenanceMode();
   }, []);
 
   useEffect(() => {
