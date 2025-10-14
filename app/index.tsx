@@ -72,12 +72,16 @@ export default function HomeScreen() {
       return;
     }
     
-    if (!user && !isGuest) {
-      console.log('🟡 [INDEX] No user and not guest, redirecting to auth...');
-      router.replace('/auth');
-    } else {
-      console.log('✅ [INDEX] User authenticated or guest mode active');
-    }
+    const timeoutId = setTimeout(() => {
+      if (!user && !isGuest) {
+        console.log('🟡 [INDEX] No user and not guest, redirecting to auth...');
+        router.replace('/auth');
+      } else {
+        console.log('✅ [INDEX] User authenticated or guest mode active');
+      }
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [user, isGuest, authLoading]);
 
   // Load saved phone number on mount

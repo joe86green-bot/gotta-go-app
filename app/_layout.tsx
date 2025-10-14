@@ -12,7 +12,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
-  const { loading } = useAuth();
+  const { loading, user, isGuest } = useAuth();
 
   useEffect(() => {
     if (!loading) {
@@ -20,6 +20,12 @@ function RootLayoutNav() {
       SplashScreen.hideAsync();
     }
   }, [loading]);
+
+  useEffect(() => {
+    if (!loading) {
+      console.log('🟢 [LAYOUT] Auth state:', { user: user?.email || 'null', isGuest });
+    }
+  }, [loading, user, isGuest]);
 
   if (loading) {
     console.log('🟡 [LAYOUT] Still loading auth, showing splash...');

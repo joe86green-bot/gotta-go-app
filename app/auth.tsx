@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,7 +31,22 @@ export default function AuthScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { register, signIn, continueAsGuest } = useAuth();
+  const { register, signIn, continueAsGuest, user, isGuest, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    console.log('🟢 [AUTH_SCREEN] Auth state changed:', { authLoading, user: user?.email || 'null', isGuest });
+    
+    if (authLoading) {
+      console.log('🟡 [AUTH_SCREEN] Still loading auth...');
+      return;
+    }
+    
+    if (user || isGuest) {
+      console.log('✅ [AUTH_SCREEN] User authenticated or guest, navigating to home...');
+      setLoading(false);
+      router.replace('/');
+    }
+  }, [user, isGuest, authLoading]);
 
   const handleSubmit = async () => {
     console.log('🟢 [AUTH_SCREEN] handleSubmit called');
@@ -81,9 +96,7 @@ export default function AuthScreen() {
         console.log('✅ [AUTH_SCREEN] SignIn function completed, user:', user.uid);
       }
       
-      console.log('🟢 [AUTH_SCREEN] Auth successful, navigating immediately...');
-      router.replace('/');
-      console.log('✅ [AUTH_SCREEN] Navigation completed');
+      console.log('✅ [AUTH_SCREEN] Auth successful, auth state will trigger navigation');
     } catch (error: any) {
       console.error('❌ [AUTH_SCREEN] Error in handleSubmit:', error);
       console.error('❌ [AUTH_SCREEN] Error message:', error.message);
@@ -94,9 +107,11 @@ export default function AuthScreen() {
 
   const handleGuestMode = async () => {
     try {
+      console.log('🟢 [AUTH_SCREEN] Continuing as guest...');
       await continueAsGuest();
-      router.replace('/');
+      console.log('✅ [AUTH_SCREEN] Guest mode set, auth state will trigger navigation');
     } catch (error: any) {
+      console.error('❌ [AUTH_SCREEN] Guest mode error:', error);
       Alert.alert('Error', error.message || 'Failed to continue as guest');
     }
   };
