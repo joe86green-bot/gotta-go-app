@@ -13,10 +13,9 @@ import {
   Modal,
   Switch,
   AppState,
-  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Phone, MessageSquare, Play, Pause, Check, Calendar, Clock, Save, Info, List, X, Eye, EyeOff, Shuffle, Zap, User } from 'lucide-react-native';
+import { Phone, MessageSquare, Play, Pause, Check, Calendar, Clock, Save, Info, List, X, Eye, EyeOff, Shuffle, Zap } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,7 +25,6 @@ import { COLORS } from '@/constants/colors';
 import { RECORDINGS } from '@/constants/recordings';
 import { scheduleCall, scheduleText } from '@/services/clicksend';
 import { useScheduledItems } from '@/providers/ScheduledItemsProvider';
-import { useAuth } from '@/providers/AuthProvider';
 
 type TabType = 'call' | 'text';
 
@@ -54,35 +52,18 @@ export default function HomeScreen() {
     "Got called into work for emergency",
     "My sister is stranded and needs a ride"
   ]);
+  const [currentExcuseIndex, setCurrentExcuseIndex] = useState(0);
   const [scheduledDate, setScheduledDate] = useState(new Date(Date.now() + 5 * 60000));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [enableRetries, setEnableRetries] = useState(false);
+  const [maxRetries, setMaxRetries] = useState(3);
+  const [enableRandomTiming, setEnableRandomTiming] = useState(false);
   const [stealthMode, setStealthMode] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
   const { addScheduledItem } = useScheduledItems();
-  const { user, isGuest, loading: authLoading, maintenanceMode } = useAuth();
-
-  useEffect(() => {
-    console.log('🟡 [INDEX] Auth state check:', { authLoading, user: user?.email || 'null', isGuest });
-    
-    if (authLoading) {
-      console.log('🟡 [INDEX] Still loading auth...');
-      return;
-    }
-    
-    const timeoutId = setTimeout(() => {
-      if (!user && !isGuest) {
-        console.log('🟡 [INDEX] No user and not guest, redirecting to auth...');
-        router.replace('/auth');
-      } else {
-        console.log('✅ [INDEX] User authenticated or guest mode active');
-      }
-    }, 100);
-    
-    return () => clearTimeout(timeoutId);
-  }, [user, isGuest, authLoading]);
 
   // Load saved phone number on mount
   useEffect(() => {
@@ -120,6 +101,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (activeTab === 'text') {
       const newIndex = Math.floor(Math.random() * randomExcuses.length);
+      setCurrentExcuseIndex(newIndex);
       setTextMessage(randomExcuses[newIndex]);
     }
   }, [activeTab, randomExcuses]);
@@ -128,48 +110,31 @@ export default function HomeScreen() {
   const TEXT_SENDER_NUMBER = '+1 (833) 962-4030';
 
   const playRecording = async (recording: typeof RECORDINGS[0]) => {
-    console.log('🎵 [AUDIO] playRecording called');
-    console.log('🎵 [AUDIO] Recording ID:', recording.id);
-    console.log('🎵 [AUDIO] Recording title:', recording.title);
-    console.log('🎵 [AUDIO] Recording URL:', recording.url);
-    
     try {
       if (soundRef.current) {
-        console.log('🎵 [AUDIO] Unloading previous sound');
         await soundRef.current.unloadAsync();
       }
 
       if (playingId === recording.id) {
-        console.log('🎵 [AUDIO] Stopping playback (same recording)');
         setPlayingId(null);
         return;
       }
 
-      if (!recording.url || recording.url.trim() === '') {
-        console.error('❌ [AUDIO] Empty or invalid URL');
-        Alert.alert('Error', 'Invalid recording URL');
-        return;
-      }
-
-      console.log('🎵 [AUDIO] Creating sound from URL:', recording.url);
       const { sound } = await Audio.Sound.createAsync(
         { uri: recording.url },
         { shouldPlay: true }
       );
-      console.log('✅ [AUDIO] Sound created successfully');
       
       soundRef.current = sound;
       setPlayingId(recording.id);
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
-          console.log('🎵 [AUDIO] Playback finished');
           setPlayingId(null);
         }
       });
     } catch (error) {
-      console.error('❌ [AUDIO] Error playing sound:', error);
-      console.error('❌ [AUDIO] Error details:', JSON.stringify(error, null, 2));
+      console.error('Error playing sound:', error);
       Alert.alert('Error', 'Failed to play recording');
     }
   };
@@ -206,23 +171,6 @@ export default function HomeScreen() {
   };
 
   const handleSchedule = async () => {
-    if (isGuest) {
-      Alert.alert(
-        'Login Required',
-        'You need to be logged in to use this feature',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Login', onPress: () => router.push('/auth') },
-        ]
-      );
-      return;
-    }
-
-    if (maintenanceMode.enabled) {
-      Alert.alert('Service Unavailable', maintenanceMode.message);
-      return;
-    }
-
     if (!phoneNumber || phoneNumber.length < 10) {
       Alert.alert('Error', 'Please enter a valid phone number');
       return;
@@ -243,33 +191,42 @@ export default function HomeScreen() {
       return;
     }
 
+    // Apply random timing if enabled (for calls with retries)
+    let finalScheduledDate = scheduledDate;
+    if (activeTab === 'call' && enableRetries && enableRandomTiming) {
+      const randomMinutes = Math.floor(Math.random() * 3) + 1; // 1-3 minutes
+      finalScheduledDate = new Date(scheduledDate.getTime() + randomMinutes * 60000);
+    }
+
     setIsScheduling(true);
 
     try {
       if (activeTab === 'call') {
         const recording = RECORDINGS.find(r => r.id === selectedRecording);
         if (recording) {
+          // Add to scheduled items first to check limit
           addScheduledItem({
             type: 'call',
             phoneNumber,
-            scheduledTime: scheduledDate,
+            scheduledTime: finalScheduledDate,
             recordingId: recording.id,
             recordingTitle: recording.title,
-            maxRetries: 1,
+            maxRetries: enableRetries ? maxRetries : 1,
             retryCount: 0,
           });
           
-          await scheduleCall(phoneNumber, scheduledDate, recording.url);
+          await scheduleCall(phoneNumber, finalScheduledDate, recording.url);
         }
       } else {
+        // Add to scheduled items first to check limit
         addScheduledItem({
           type: 'text',
           phoneNumber,
-          scheduledTime: scheduledDate,
+          scheduledTime: finalScheduledDate,
           message: textMessage,
         });
         
-        await scheduleText(phoneNumber, scheduledDate, textMessage);
+        await scheduleText(phoneNumber, finalScheduledDate, textMessage);
       }
 
       // Handle stealth mode
@@ -287,6 +244,8 @@ export default function HomeScreen() {
       setSelectedRecording(null);
       setScheduledDate(new Date(Date.now() + 5 * 60000));
       setStealthMode(false);
+      setEnableRetries(false);
+      setEnableRandomTiming(false);
     } catch (error) {
       console.error('Error scheduling:', error);
       if (error instanceof Error && error.message.includes('Maximum of 3 scheduled items')) {
@@ -333,20 +292,12 @@ export default function HomeScreen() {
               <Text style={styles.title}>Gotta Go</Text>
               <Text style={styles.subtitle}>Your emergency escape plan</Text>
             </View>
-            <View style={styles.headerButtons}>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/scheduled-items')}
-              >
-                <List size={24} color={COLORS.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push(user ? '/account' : '/auth')}
-              >
-                <User size={24} color={COLORS.primary} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity 
+              style={styles.headerButton}
+              onPress={() => router.push('/scheduled-items')}
+            >
+              <List size={24} color={COLORS.primary} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -431,6 +382,7 @@ export default function HomeScreen() {
                   style={styles.shuffleButton}
                   onPress={() => {
                     const newIndex = Math.floor(Math.random() * randomExcuses.length);
+                    setCurrentExcuseIndex(newIndex);
                     setTextMessage(randomExcuses[newIndex]);
                   }}
                 >
@@ -448,8 +400,6 @@ export default function HomeScreen() {
                   maxLength={160}
                   multiline
                   numberOfLines={4}
-                  returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
                 />
                 <Text style={styles.charCount}>{textMessage.length}/160</Text>
               </View>
@@ -465,8 +415,6 @@ export default function HomeScreen() {
               value={phoneNumber}
               onChangeText={setPhoneNumber}
               keyboardType="phone-pad"
-              returnKeyType="done"
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -545,6 +493,77 @@ export default function HomeScreen() {
                 thumbColor={stealthMode ? COLORS.primary : '#f4f3f4'}
               />
             </View>
+
+            {activeTab === 'call' && (
+              <>
+                {/* Retry Options */}
+                <View style={styles.optionRow}>
+                  <View style={styles.optionInfo}>
+                    <View style={styles.optionHeader}>
+                      <Phone size={20} color={enableRetries ? COLORS.primary : COLORS.textSecondary} />
+                      <Text style={styles.optionTitle}>Retry Calls</Text>
+                    </View>
+                    <Text style={styles.optionDescription}>
+                      Call up to 3 times until answered
+                    </Text>
+                  </View>
+                  <Switch
+                    value={enableRetries}
+                    onValueChange={setEnableRetries}
+                    trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+                    thumbColor={enableRetries ? COLORS.primary : '#f4f3f4'}
+                  />
+                </View>
+                
+                {enableRetries && (
+                  <>
+                    <View style={styles.retryCountContainer}>
+                      <Text style={styles.retryCountLabel}>Max retries:</Text>
+                      <View style={styles.retryCountButtons}>
+                        {[1, 2, 3].map((count) => (
+                          <TouchableOpacity
+                            key={count}
+                            style={[
+                              styles.retryCountButton,
+                              maxRetries === count && styles.retryCountButtonActive,
+                            ]}
+                            onPress={() => setMaxRetries(count)}
+                          >
+                            <Text
+                              style={[
+                                styles.retryCountButtonText,
+                                maxRetries === count && styles.retryCountButtonTextActive,
+                              ]}
+                            >
+                              {count}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* Random Timing */}
+                    <View style={styles.optionRow}>
+                      <View style={styles.optionInfo}>
+                        <View style={styles.optionHeader}>
+                          <Shuffle size={20} color={enableRandomTiming ? COLORS.primary : COLORS.textSecondary} />
+                          <Text style={styles.optionTitle}>Random Timing</Text>
+                        </View>
+                        <Text style={styles.optionDescription}>
+                          Add 1-3 minutes randomness to seem natural
+                        </Text>
+                      </View>
+                      <Switch
+                        value={enableRandomTiming}
+                        onValueChange={setEnableRandomTiming}
+                        trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+                        thumbColor={enableRandomTiming ? COLORS.primary : '#f4f3f4'}
+                      />
+                    </View>
+                  </>
+                )}
+              </>
+            )}
           </View>
 
           <TouchableOpacity
@@ -927,10 +946,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
   },
   headerButton: {
     padding: 8,
