@@ -36,34 +36,62 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [maintenanceMode, setMaintenanceMode] = useState<MaintenanceMode>({ enabled: false, message: '' });
 
   useEffect(() => {
+    console.log('🔵 [AUTH_PROVIDER] Setting up auth listener');
+    let isMounted = true;
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('Auth state changed:', firebaseUser?.email);
+      console.log('🔵 [AUTH_PROVIDER] Auth state changed:', firebaseUser?.email || 'null');
+      
+      if (!isMounted) {
+        console.log('⚠️ [AUTH_PROVIDER] Component unmounted, skipping state update');
+        return;
+      }
+      
       setUser(firebaseUser);
       
       if (firebaseUser) {
-        const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (profileDoc.exists()) {
-          const data = profileDoc.data();
-          setUserProfile({
-            email: data.email,
-            phone: data.phone,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            isAdmin: data.isAdmin || false,
-          });
+        console.log('🔵 [AUTH_PROVIDER] Loading user profile...');
+        try {
+          const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (profileDoc.exists() && isMounted) {
+            const data = profileDoc.data();
+            console.log('✅ [AUTH_PROVIDER] Profile loaded:', data.email);
+            setUserProfile({
+              email: data.email,
+              phone: data.phone,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              isAdmin: data.isAdmin || false,
+            });
+          }
+        } catch (error) {
+          console.error('❌ [AUTH_PROVIDER] Error loading profile:', error);
         }
-        setIsGuest(false);
+        if (isMounted) {
+          setIsGuest(false);
+        }
       } else {
-        setUserProfile(null);
-        const guestMode = await AsyncStorage.getItem('guest_mode');
-        setIsGuest(guestMode === 'true');
+        console.log('🔵 [AUTH_PROVIDER] No user, checking guest mode...');
+        if (isMounted) {
+          setUserProfile(null);
+          const guestMode = await AsyncStorage.getItem('guest_mode');
+          console.log('🔵 [AUTH_PROVIDER] Guest mode:', guestMode);
+          setIsGuest(guestMode === 'true');
+        }
       }
       
-      setLoading(false);
+      if (isMounted) {
+        console.log('✅ [AUTH_PROVIDER] Setting loading to false');
+        setLoading(false);
+      }
     });
 
     loadMaintenanceMode();
 
-    return unsubscribe;
+    return () => {
+      console.log('🔵 [AUTH_PROVIDER] Cleaning up auth listener');
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const loadMaintenanceMode = async () => {
@@ -116,6 +144,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         isAdmin,
       });
       console.log('✅ [REGISTER] Firestore document created successfully');
+      
+      console.log('🔵 [REGISTER] Removing guest mode...');
+      await AsyncStorage.removeItem('guest_mode');
+      console.log('✅ [REGISTER] Guest mode removed');
 
       console.log('✅ [REGISTER] User registered successfully');
       return userCredential.user;
@@ -123,7 +155,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       console.error('❌ [REGISTER] Registration error:', error);
       console.error('❌ [REGISTER] Error code:', error.code);
       console.error('❌ [REGISTER] Error message:', error.message);
-      console.error('❌ [REGISTER] Full error:', JSON.stringify(error, null, 2));
       throw new Error(error.message || 'Failed to register');
     }
   }, []);

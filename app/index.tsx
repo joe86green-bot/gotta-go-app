@@ -65,8 +65,18 @@ export default function HomeScreen() {
   const { user, isGuest, loading: authLoading, maintenanceMode } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && !user && !isGuest) {
+    console.log('🟡 [INDEX] Auth state check:', { authLoading, user: user?.email || 'null', isGuest });
+    
+    if (authLoading) {
+      console.log('🟡 [INDEX] Still loading auth...');
+      return;
+    }
+    
+    if (!user && !isGuest) {
+      console.log('🟡 [INDEX] No user and not guest, redirecting to auth...');
       router.replace('/auth');
+    } else {
+      console.log('✅ [INDEX] User authenticated or guest mode active');
     }
   }, [user, isGuest, authLoading]);
 
