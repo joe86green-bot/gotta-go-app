@@ -75,14 +75,21 @@ export default function AuthScreen() {
         console.log('🟢 [AUTH] Calling register function...');
         await register(email, password, phone);
         console.log('✅ [AUTH] Register function completed');
+        console.log('🟢 [AUTH] Waiting for auth state to settle...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log('✅ [AUTH] Auth state settled');
         Alert.alert('Success', 'Account created successfully!');
       } else {
         console.log('🟢 [AUTH] Calling signIn function...');
         await signIn(email, password);
         console.log('✅ [AUTH] SignIn function completed');
+        console.log('🟢 [AUTH] Waiting for auth state to settle...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log('✅ [AUTH] Auth state settled');
       }
       console.log('🟢 [AUTH] Navigating to home...');
       router.replace('/');
+      console.log('✅ [AUTH] Navigation completed');
     } catch (error: any) {
       console.error('❌ [AUTH] Error in handleSubmit:', error);
       console.error('❌ [AUTH] Error message:', error.message);
