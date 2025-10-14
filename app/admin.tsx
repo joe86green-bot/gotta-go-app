@@ -66,8 +66,11 @@ export default function AdminScreen() {
         const data = maintenanceDoc.data() as MaintenanceMode;
         setMaintenanceMode(data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading maintenance mode:', error);
+      if (error?.code === 'unavailable') {
+        console.log('Firebase is offline, using default maintenance settings');
+      }
     }
   };
 
