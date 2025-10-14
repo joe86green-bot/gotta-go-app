@@ -62,12 +62,9 @@ export default function HomeScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [enableRetries, setEnableRetries] = useState(false);
-  const [maxRetries, setMaxRetries] = useState(3);
   const [enableRandomTiming, setEnableRandomTiming] = useState(false);
   const [stealthMode, setStealthMode] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState<{ enabled: boolean; message: string } | null>(null);
-  const [isLoadingMaintenance, setIsLoadingMaintenance] = useState(true);
   const soundRef = useRef<Audio.Sound | null>(null);
   const { addScheduledItem } = useScheduledItems();
 
@@ -124,8 +121,6 @@ export default function HomeScreen() {
       } catch (error) {
         console.error('Error loading maintenance mode:', error);
         setMaintenanceMode({ enabled: false, message: '' });
-      } finally {
-        setIsLoadingMaintenance(false);
       }
     };
     loadMaintenanceMode();
@@ -239,12 +234,7 @@ export default function HomeScreen() {
       return;
     }
 
-    // Apply random timing if enabled (for calls with retries)
-    let finalScheduledDate = scheduledDate;
-    if (activeTab === 'call' && enableRetries && enableRandomTiming) {
-      const randomMinutes = Math.floor(Math.random() * 3) + 1; // 1-3 minutes
-      finalScheduledDate = new Date(scheduledDate.getTime() + randomMinutes * 60000);
-    }
+    const finalScheduledDate = scheduledDate;
 
     setIsScheduling(true);
 
@@ -259,8 +249,6 @@ export default function HomeScreen() {
             scheduledTime: finalScheduledDate,
             recordingId: recording.id,
             recordingTitle: recording.title,
-            maxRetries: enableRetries ? maxRetries : 1,
-            retryCount: 0,
           });
           
           await scheduleCall(phoneNumber, finalScheduledDate, recording.url);
@@ -292,7 +280,6 @@ export default function HomeScreen() {
       setSelectedRecording(null);
       setScheduledDate(new Date(Date.now() + 5 * 60000));
       setStealthMode(false);
-      setEnableRetries(false);
       setEnableRandomTiming(false);
     } catch (error) {
       console.error('Error scheduling:', error);
@@ -564,91 +551,28 @@ export default function HomeScreen() {
               />
             </View>
 
-            {activeTab === 'call' && (
-              <>
-                {/* Retry Options */}
-                <View style={styles.optionRow}>
-                  <View style={styles.optionInfo}>
-                    <View style={styles.optionHeader}>
-                      <Phone size={20} color={enableRetries ? COLORS.primary : COLORS.textSecondary} />
-                      <Text style={styles.optionTitle}>Retry Calls</Text>
-                    </View>
-                    <Text style={styles.optionDescription}>
-                      Call up to 3 times until answered
-                    </Text>
-                  </View>
-                  <Switch
-                    value={enableRetries}
-                    onValueChange={setEnableRetries}
-                    trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                    thumbColor={enableRetries ? COLORS.primary : '#f4f3f4'}
-                  />
-                </View>
-                
-                {enableRetries && (
-                  <>
-                    <View style={styles.retryCountContainer}>
-                      <Text style={styles.retryCountLabel}>Max retries:</Text>
-                      <View style={styles.retryCountButtons}>
-                        {[1, 2, 3].map((count) => (
-                          <TouchableOpacity
-                            key={count}
-                            style={[
-                              styles.retryCountButton,
-                              maxRetries === count && styles.retryCountButtonActive,
-                            ]}
-                            onPress={() => setMaxRetries(count)}
-                          >
-                            <Text
-                              style={[
-                                styles.retryCountButtonText,
-                                maxRetries === count && styles.retryCountButtonTextActive,
-                              ]}
-                            >
-                              {count}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
 
-                    {/* Random Timing */}
-                    <View style={styles.optionRow}>
-                      <View style={styles.optionInfo}>
-                        <View style={styles.optionHeader}>
-                          <Shuffle size={20} color={enableRandomTiming ? COLORS.primary : COLORS.textSecondary} />
-                          <Text style={styles.optionTitle}>Random Timing</Text>
-                        </View>
-                        <Text style={styles.optionDescription}>
-                          Add 1-3 minutes randomness to seem natural
-                        </Text>
-                      </View>
-                      <Switch
-                        value={enableRandomTiming}
-                        onValueChange={setEnableRandomTiming}
-                        trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                        thumbColor={enableRandomTiming ? COLORS.primary : '#f4f3f4'}
-                      />
-                    </View>
-                  </>
-                )}
-              </>
-            )}
           </View>
 
-          <TouchableOpacity
-            style={[styles.scheduleButton, isScheduling && styles.disabledButton]}
-            onPress={handleSchedule}
-            disabled={isScheduling}
-          >
-            {isScheduling ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.scheduleButtonText}>
-                Schedule {activeTab === 'call' ? 'Call' : 'Text'}
-              </Text>
-            )}
-          </TouchableOpacity>
+          {maintenanceMode?.enabled && !isGuest ? (
+            <View style={styles.maintenanceNotice}>
+              <Text style={styles.maintenanceNoticeText}>{maintenanceMode.message}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.scheduleButton, (isScheduling || maintenanceMode?.enabled) && styles.disabledButton]}
+              onPress={handleSchedule}
+              disabled={isScheduling || maintenanceMode?.enabled}
+            >
+              {isScheduling ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.scheduleButtonText}>
+                  Schedule {activeTab === 'call' ? 'Call' : 'Text'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
         </ScrollView>
 
         {showDatePicker && (
@@ -1248,5 +1172,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600' as const,
+  },
+  maintenanceNotice: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
+    padding: 18,
+    marginBottom: 40,
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+  },
+  maintenanceNoticeText: {
+    fontSize: 16,
+    color: '#92400e',
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

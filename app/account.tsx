@@ -12,13 +12,16 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { User, Mail, Lock, LogOut, Trash2, Eye, EyeOff } from 'lucide-react-native';
+import { User, Mail, Lock, LogOut, Trash2, Eye, EyeOff, Edit2, X, Check } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
+import { router } from 'expo-router';
+
+type EditMode = 'none' | 'email' | 'password';
 
 export default function AccountScreen() {
   const { userProfile, updateUserEmail, updateUserPassword, deleteAccount, logout } = useAuth();
+  const [editMode, setEditMode] = useState<EditMode>('none');
   const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -26,26 +29,25 @@ export default function AccountScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleUpdateEmail = async () => {
-    if (!newEmail.trim() || !currentPassword.trim()) {
-      Alert.alert('Error', 'Please enter new email and current password');
+    if (!newEmail.trim()) {
+      Alert.alert('Error', 'Please enter new email');
       return;
     }
 
-    setIsUpdatingEmail(true);
+    setIsUpdating(true);
     try {
-      await updateUserEmail(newEmail.trim(), currentPassword);
+      await updateUserEmail(newEmail.trim(), '');
       Alert.alert('Success', 'Email updated successfully');
       setNewEmail('');
-      setCurrentPassword('');
+      setEditMode('none');
     } catch (error: any) {
       Alert.alert('Update Failed', error.message || 'Failed to update email');
     } finally {
-      setIsUpdatingEmail(false);
+      setIsUpdating(false);
     }
   };
 
@@ -65,18 +67,30 @@ export default function AccountScreen() {
       return;
     }
 
-    setIsUpdatingPassword(true);
+    setIsUpdating(true);
     try {
       await updateUserPassword(newPassword, currentPassword);
       Alert.alert('Success', 'Password updated successfully');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
+      setEditMode('none');
     } catch (error: any) {
       Alert.alert('Update Failed', error.message || 'Failed to update password');
     } finally {
-      setIsUpdatingPassword(false);
+      setIsUpdating(false);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setEditMode('none');
+    setNewEmail('');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleLogout = async () => {
@@ -163,138 +177,182 @@ export default function AccountScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Update Email</Text>
-            <View style={styles.inputContainer}>
-              <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="New email address"
-                placeholderTextColor="#999"
-                value={newEmail}
-                onChangeText={setNewEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Current password"
-                placeholderTextColor="#999"
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                secureTextEntry={!showCurrentPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-              >
-                {showCurrentPassword ? (
-                  <EyeOff size={20} color={COLORS.textSecondary} />
-                ) : (
-                  <Eye size={20} color={COLORS.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={[styles.button, isUpdatingEmail && styles.disabledButton]}
-              onPress={handleUpdateEmail}
-              disabled={isUpdatingEmail}
-            >
-              {isUpdatingEmail ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Update Email</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Email Address</Text>
+              {editMode !== 'email' && (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => {
+                    setNewEmail(userProfile?.email || '');
+                    setEditMode('email');
+                  }}
+                >
+                  <Edit2 size={18} color={COLORS.primary} />
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
+
+            {editMode === 'email' ? (
+              <View style={styles.editContainer}>
+                <View style={styles.inputContainer}>
+                  <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="New email address"
+                    placeholderTextColor="#999"
+                    value={newEmail}
+                    onChangeText={setNewEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.cancelButton]}
+                    onPress={handleCancelEdit}
+                  >
+                    <X size={18} color={COLORS.textSecondary} />
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.saveButton, isUpdating && styles.disabledButton]}
+                    onPress={handleUpdateEmail}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Check size={18} color="#fff" />
+                        <Text style={styles.saveButtonText}>Save</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoText}>{userProfile?.email}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Change Password</Text>
-            <View style={styles.inputContainer}>
-              <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Current password"
-                placeholderTextColor="#999"
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                secureTextEntry={!showCurrentPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-              >
-                {showCurrentPassword ? (
-                  <EyeOff size={20} color={COLORS.textSecondary} />
-                ) : (
-                  <Eye size={20} color={COLORS.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-            <View style={styles.inputContainer}>
-              <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="New password"
-                placeholderTextColor="#999"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry={!showNewPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowNewPassword(!showNewPassword)}
-              >
-                {showNewPassword ? (
-                  <EyeOff size={20} color={COLORS.textSecondary} />
-                ) : (
-                  <Eye size={20} color={COLORS.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-            <View style={styles.inputContainer}>
-              <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Confirm new password"
-                placeholderTextColor="#999"
-                value={confirmNewPassword}
-                onChangeText={setConfirmNewPassword}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color={COLORS.textSecondary} />
-                ) : (
-                  <Eye size={20} color={COLORS.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={[styles.button, isUpdatingPassword && styles.disabledButton]}
-              onPress={handleUpdatePassword}
-              disabled={isUpdatingPassword}
-            >
-              {isUpdatingPassword ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Change Password</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Password</Text>
+              {editMode !== 'password' && (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => setEditMode('password')}
+                >
+                  <Edit2 size={18} color={COLORS.primary} />
+                  <Text style={styles.editButtonText}>Change</Text>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
+
+            {editMode === 'password' ? (
+              <View style={styles.editContainer}>
+                <View style={styles.inputContainer}>
+                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    placeholder="Current password"
+                    placeholderTextColor="#999"
+                    value={currentPassword}
+                    onChangeText={setCurrentPassword}
+                    secureTextEntry={!showCurrentPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff size={20} color={COLORS.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={COLORS.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.inputContainer}>
+                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    placeholder="New password"
+                    placeholderTextColor="#999"
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry={!showNewPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff size={20} color={COLORS.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={COLORS.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.inputContainer}>
+                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    placeholder="Confirm new password"
+                    placeholderTextColor="#999"
+                    value={confirmNewPassword}
+                    onChangeText={setConfirmNewPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} color={COLORS.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={COLORS.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.cancelButton]}
+                    onPress={handleCancelEdit}
+                  >
+                    <X size={18} color={COLORS.textSecondary} />
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.saveButton, isUpdating && styles.disabledButton]}
+                    onPress={handleUpdatePassword}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Check size={18} color="#fff" />
+                        <Text style={styles.saveButtonText}>Save</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoText}>••••••••</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -363,18 +421,53 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600' as const,
     color: COLORS.text,
-    marginBottom: 16,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 8,
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: COLORS.primary,
+  },
+  infoCard: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  infoText: {
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  editContainer: {
+    gap: 12,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
-    marginBottom: 12,
     paddingHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -397,25 +490,45 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 8,
   },
-  button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
+  editActions: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 8,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 12,
+    padding: 14,
+  },
+  cancelButton: {
+    backgroundColor: COLORS.cardBackground,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: COLORS.textSecondary,
+  },
+  saveButton: {
+    backgroundColor: COLORS.primary,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
-  disabledButton: {
-    opacity: 0.7,
-  },
-  buttonText: {
+  saveButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
     color: '#fff',
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   logoutButton: {
     flexDirection: 'row',

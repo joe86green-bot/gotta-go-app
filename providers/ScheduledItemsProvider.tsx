@@ -74,29 +74,27 @@ export const [ScheduledItemsProvider, useScheduledItems] = createContextHook(() 
     saveScheduledItems([]);
   }, [saveScheduledItems]);
 
-  // Auto-remove completed items
   useEffect(() => {
     const checkAndRemoveCompleted = () => {
       const now = new Date();
       const itemsToRemove = scheduledItems.filter(item => {
         const scheduledTime = new Date(item.scheduledTime);
-        // Remove items that are 5 minutes past their scheduled time
-        return now.getTime() - scheduledTime.getTime() > 5 * 60 * 1000;
+        return now.getTime() >= scheduledTime.getTime();
       });
 
       if (itemsToRemove.length > 0) {
         const updatedItems = scheduledItems.filter(item => {
           const scheduledTime = new Date(item.scheduledTime);
-          return now.getTime() - scheduledTime.getTime() <= 5 * 60 * 1000;
+          return now.getTime() < scheduledTime.getTime();
         });
         setScheduledItems(updatedItems);
         saveScheduledItems(updatedItems);
-        console.log(`Auto-removed ${itemsToRemove.length} completed items`);
+        console.log(`✅ Auto-removed ${itemsToRemove.length} completed items`);
       }
     };
 
-    const interval = setInterval(checkAndRemoveCompleted, 60000); // Check every minute
-    checkAndRemoveCompleted(); // Check immediately
+    const interval = setInterval(checkAndRemoveCompleted, 30000);
+    checkAndRemoveCompleted();
 
     return () => clearInterval(interval);
   }, [scheduledItems, saveScheduledItems]);
