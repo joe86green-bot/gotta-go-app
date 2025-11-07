@@ -133,7 +133,7 @@ export default function AccountScreen() {
                 {
                   text: 'Delete',
                   style: 'destructive',
-                  onPress: async (password) => {
+                  onPress: async (password?: string) => {
                     if (!password) {
                       Alert.alert('Error', 'Password is required');
                       return;
